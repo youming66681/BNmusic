@@ -1,4 +1,4 @@
-package magical;
+package BNmusic;
 
 import arc.*;
 import arc.util.*;
