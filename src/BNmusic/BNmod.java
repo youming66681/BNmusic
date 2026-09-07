@@ -10,7 +10,7 @@ import mindustry.mod.Mod;
 import mindustry.mod.Mods;
 import arc.audio.Sound;
 
-import BNmusic.content.BNMusic;
+import BNmusic.content.BNmusic;
 
 public class BNmod extends Mod {
     public static Mods.LoadedMod ML;

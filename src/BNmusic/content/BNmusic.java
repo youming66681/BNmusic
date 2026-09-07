@@ -9,7 +9,7 @@ import mindustry.game.EventType;
 import mindustry.gen.Groups;
 import mindustry.gen.Unit;
 import mindustry.type.UnitType;
-public class BNMusic{
+public class BNmusic{
     public static final Seq<Music> gameMusic = new Seq<>();
     public static final Seq<Music> bossMusic = new Seq<>();
     private static Music currentGame;
