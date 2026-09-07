@@ -65,12 +65,13 @@ public class BNMusic{
         current.play();
         Log.info("[BNMusic] Playing music.");
     }
+    private static final Rand random = new Rand();
     private static Music randomMusic(){
         if(gameMusic.isEmpty())return null;
         if(gameMusic.size == 1)return gameMusic.first();
         int index;
         do{
-            index = Core.app.getRandom().nextInt(gameMusic.size);
+            index = random.nextInt(gameMusic.size);
         }while(index == lastIndex);
         lastIndex = index;
         return gameMusic.get(index);
