@@ -1,4 +1,4 @@
-package magical.content;
+package BNMusic.content;
 import arc.Core;
 import arc.Events;
 import arc.audio.Music;
@@ -9,7 +9,7 @@ import mindustry.game.EventType;
 import mindustry.gen.Groups;
 import mindustry.gen.Unit;
 import mindustry.type.UnitType;
-public class MLMusic{
+public class BNMusic{
     public static final Seq<Music> gameMusic = new Seq<>();
     public static final Seq<Music> bossMusic = new Seq<>();
     private static Music currentGame;
@@ -79,8 +79,8 @@ public class MLMusic{
         return result[0];
     }
     private static boolean isBoss(Unit unit){
-        if(unit.type == null)return false;
-        return unit.type.boss;
+        if(unit == null || unit.type == null)return false;
+        return unit.isBoss();
     }
     private static void startGame(){
         if(gameMusic.isEmpty())return;
