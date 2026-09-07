@@ -11,7 +11,7 @@ author: "youming"
 main: "BNmusic.BNmod"
 
 #the mod description as seen in the mod dialog
-description: "A Mindustry Java mod template."
+description: "ZAKO，zako"
 
 #the mod version
 version: 1.0
@@ -21,3 +21,5 @@ minGameVersion: 158
 
 #this is a java mod
 java: true
+
+hidden : true
