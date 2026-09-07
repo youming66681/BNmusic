@@ -1,4 +1,5 @@
 package BNmusic.content;
+
 import arc.Core;
 import arc.Events;
 import arc.audio.Music;
@@ -6,6 +7,8 @@ import arc.struct.Seq;
 import arc.util.Log;
 import arc.util.Time;
 import mindustry.game.EventType;
+import arc.math.Rand;
+
 public class BNMusic{
     public static final Seq<Music> gameMusic = new Seq<>();
     private static Music current;
