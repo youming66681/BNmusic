@@ -8,7 +8,7 @@ name: "BNmusic"
 author: "youming"
 
 #the fully qualified main class of the mod
-main: "BNmusic.ExampleJavaMod"
+main: "BNmusic.BNmod"
 
 #the mod description as seen in the mod dialog
 description: "A Mindustry Java mod template."
