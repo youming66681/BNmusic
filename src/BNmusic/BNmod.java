@@ -26,8 +26,4 @@ public class BNmod extends Mod {
 
         BNMusic.load();
     }
-    @Override
-    public void init(){
-        BNMusic.init();
-    }
 }

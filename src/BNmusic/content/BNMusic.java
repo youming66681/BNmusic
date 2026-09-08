@@ -28,24 +28,20 @@ public class BNMusic{
     }
     private static void loadGameMusic(){
         for(int i = 1;i <= 27;i++){
-            try{
-                Music music = Core.assets.load("music/game"+i+".ogg",Music.class).get();
+            int id = i;
+            Core.assets.load("music/game"+id+".ogg",Music.class,music->{
                 music.setLooping(false);
                 gameMusic.add(music);
-            }catch(Exception e){
-                Log.err("无法加载游戏音乐 game"+i);
-            }
+            });
         }
     }
     private static void loadBossMusic(){
         for(int i = 1;i <= 3;i++){
-            try{
-                Music music = Core.assets.load("music/boss"+i+".ogg",Music.class).get();
+            int id = i;
+            Core.assets.load("music/boss"+id+".ogg",Music.class,music->{
                 music.setLooping(true);
                 bossMusic.add(music);
-            }catch(Exception e){
-                Log.err("无法加载Boss音乐 boss"+i);
-            }
+            });
         }
     }
     private static void update(){
