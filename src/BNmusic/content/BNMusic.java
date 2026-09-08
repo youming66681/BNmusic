@@ -1,30 +1,31 @@
 package BNmusic.content;
-
 import arc.Core;
 import arc.Events;
 import arc.audio.Music;
+import arc.math.Rand;
 import arc.struct.Seq;
 import arc.util.Log;
 import arc.util.Time;
 import mindustry.Vars;
-import mindustry.audio.SoundControl;
-import mindustry.entities.Groups;
+import mindustry.entities.*;
+import mindustry.gen.Groups;
 import mindustry.gen.Unit;
 import mindustry.game.EventType;
-
 public class BNMusic{
     public static final Seq<Music> gameMusic = new Seq<>();
     public static final Seq<Music> bossMusic = new Seq<>();
+    private static final Rand random = new Rand();
     private static Music current;
     private static Music bossCurrent;
     private static int lastGameIndex = -1;
     private static int lastBossIndex = -1;
     private static boolean loaded = false;
     private static boolean enabled = true;
-    private static float checkTimer = 0f;
     private static boolean bossPlaying = false;
+    private static float checkTimer = 0f;
     private static final float CHECK_INTERVAL = 5f;
     public static void load(){
+        if(Vars.headless)return;
         for(int i = 1;i <= 27;i++){
             loadGameMusic("game" + i);
         }
@@ -61,12 +62,15 @@ public class BNMusic{
         }
     }
     public static void init(){
+        if(Vars.headless)return;
         Events.run(EventType.Trigger.update, BNMusic::update);
     }
     private static void update(){
         if(!enabled)return;
+        if(Vars.headless)return;
         disableVanillaMusic();
         if(!loaded)return;
+        if(gameMusic.isEmpty())return;
         checkTimer += Time.delta;
         if(checkTimer < CHECK_INTERVAL)return;
         checkTimer = 0f;
@@ -91,18 +95,21 @@ public class BNMusic{
             Vars.state.rules.disableMusic = true;
         }
         if(Vars.control != null && Vars.control.sound != null){
-            Vars.control.sound.stop();
+            if(Vars.control.sound.getCurrent() != current && Vars.control.sound.getCurrent() != bossCurrent){
+                Vars.control.sound.stop();
+            }
         }
     }
     private static boolean hasBoss(){
         for(Unit unit : Groups.unit){
-            if(unit != null && unit.isAdded() && unit.isBoss() && !unit.dead()){
+            if(unit != null && unit.isAdded() && !unit.dead() && unit.isBoss()){
                 return true;
             }
         }
         return false;
     }
     private static void startGameMusic(){
+        if(!enabled)return;
         if(gameMusic.isEmpty())return;
         Music next = randomGameMusic();
         if(next == null)return;
@@ -126,6 +133,7 @@ public class BNMusic{
         }
     }
     private static void startBossMusic(){
+        if(!enabled)return;
         if(bossMusic.isEmpty())return;
         Music next = randomBossMusic();
         if(next == null)return;
@@ -156,8 +164,7 @@ public class BNMusic{
         }
         int index;
         do{
-            index = Core.app.getJavaScript().getClass().hashCode();
-            index = Math.abs(index + (int)Time.millis()) % gameMusic.size;
+            index = random.nextInt(gameMusic.size);
         }while(index == lastGameIndex);
         lastGameIndex = index;
         return gameMusic.get(index);
@@ -170,7 +177,7 @@ public class BNMusic{
         }
         int index;
         do{
-            index = Math.abs((int)(Time.millis() ^ (Time.millis() >>> 32))) % bossMusic.size;
+            index = random.nextInt(bossMusic.size);
         }while(index == lastBossIndex);
         lastBossIndex = index;
         return bossMusic.get(index);
