@@ -24,14 +24,18 @@ public class BNMusic{
             if(!Vars.headless)update();
         });
         playNextGame();
+        Log.info("game1 exists: @", Core.files.internal("music/game1.ogg").exists());
     }
     private static void loadGameMusic(){
         for(int i = 1;i <= 27;i++){
-            int id = i;
-            Core.assets.load("music/game"+id+".ogg",Music.class).loaded = music->{
-                music.setLooping(false);
-                gameMusic.add(music);
-            };
+            String path = "music/game"+i+".ogg";
+
+            if(Core.files.internal(path).exists()){
+                Core.assets.load(path, Music.class).loaded = music -> {
+                    music.setLooping(false);
+                    gameMusic.add(music);
+                };
+            }
         }
     }
     private static void loadBossMusic(){
@@ -63,7 +67,7 @@ public class BNMusic{
         }
     }
     private static boolean isBoss(Unit unit){
-        return unit.type.name.contains("boss");
+        return unit.type.boss;
     }
     private static void playNextGame(){
         if(gameMusic.isEmpty())return;
