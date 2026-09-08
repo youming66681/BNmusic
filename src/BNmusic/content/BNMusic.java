@@ -1,4 +1,5 @@
 package BNmusic.content;
+
 import arc.Core;
 import arc.audio.Music;
 import arc.Events;
@@ -10,6 +11,7 @@ import mindustry.audio.SoundControl;
 import mindustry.game.EventType.ClientLoadEvent;
 import mindustry.gen.Groups;
 import mindustry.gen.Unit;
+
 public class BNMusic extends SoundControl{
     private final Seq<Music> gameMusic = new Seq<>();
     private final Seq<Music> customBossMusic = new Seq<>();
