@@ -4,7 +4,6 @@ import arc.Core;
 import arc.audio.Music;
 import arc.Events;
 import arc.struct.Seq;
-import arc.util.Log;
 import mindustry.Vars;
 import mindustry.game.EventType;
 import mindustry.gen.Groups;
@@ -29,19 +28,19 @@ public class BNMusic{
     private static void loadGameMusic(){
         for(int i = 1;i <= 27;i++){
             int id = i;
-            Core.assets.load("music/game"+id+".ogg",Music.class,music->{
+            Core.assets.load("music/game"+id+".ogg",Music.class).loaded = music->{
                 music.setLooping(false);
                 gameMusic.add(music);
-            });
+            };
         }
     }
     private static void loadBossMusic(){
         for(int i = 1;i <= 3;i++){
             int id = i;
-            Core.assets.load("music/boss"+id+".ogg",Music.class,music->{
+            Core.assets.load("music/boss"+id+".ogg",Music.class).loaded = music->{
                 music.setLooping(true);
                 bossMusic.add(music);
-            });
+            };
         }
     }
     private static void update(){
