@@ -1,4 +1,5 @@
 package BNmusic.content;
+
 import arc.Core;
 import arc.Events;
 import arc.audio.Filters;
@@ -10,9 +11,9 @@ import arc.util.Log;
 import arc.util.Time;
 import mindustry.Vars;
 import mindustry.audio.SoundControl;
-import mindustry.content.Musics;
 import mindustry.game.EventType.MusicRegisterEvent;
 import static mindustry.Vars.*;
+
 public class BNMusic extends SoundControl{
     private static BNMusic instance;
     private final Seq<Music> gameMusic = new Seq<>();
@@ -88,7 +89,7 @@ public class BNMusic extends SoundControl{
             };
         }
         Events.fire(new MusicRegisterEvent());
-        Log.info("[BNMusic] reload: loading game1-game27 and boss1-boss3.");
+        Log.info("[BNMusic] Reloaded custom music: game1-game27, boss1-boss3.");
     }
     @Override
     public void update(){
@@ -116,28 +117,13 @@ public class BNMusic extends SoundControl{
             }
         }
         Core.audio.setPaused(Core.audio.soundBus.id, state.isPaused());
-        if(state.isMenu()){
+        if(!state.isGame()){
             bossPlaying = false;
-            silenced = false;
-            if(ui.planet.isShown()){
-                play(ui.planet.state.planet.launchMusic);
-            }else if(ui.editor.isShown()){
-                play(Musics.editor);
-            }else{
-                play(Musics.menu);
-            }
+            silence();
             updateLoops();
             return;
         }
         if(state.rules.editor){
-            bossPlaying = false;
-            silenced = false;
-            play(Musics.editor);
-            updateLoops();
-            return;
-        }
-        if(!state.isGame()){
-            bossPlaying = false;
             silence();
             updateLoops();
             return;
