@@ -1,18 +1,18 @@
 package BNmusic.content;
-
 import arc.Core;
 import arc.Events;
+import arc.audio.Filters;
 import arc.audio.Music;
 import arc.audio.Sound;
-import arc.audio.Filters;
 import arc.files.Fi;
 import arc.struct.Seq;
 import arc.util.Log;
 import arc.util.Time;
 import mindustry.Vars;
 import mindustry.audio.SoundControl;
+import mindustry.content.Musics;
 import mindustry.game.EventType.MusicRegisterEvent;
-
+import static mindustry.Vars.*;
 public class BNMusic extends SoundControl{
     private static BNMusic instance;
     private final Seq<Music> gameMusic = new Seq<>();
@@ -20,7 +20,6 @@ public class BNMusic extends SoundControl{
     private int gameIndex = 0;
     private boolean bossPlaying = false;
     private Music lastBossMusic;
-    private boolean initialized = false;
     public BNMusic(){
         super();
         instance = this;
@@ -40,11 +39,11 @@ public class BNMusic extends SoundControl{
         silenced = false;
         lastRandomPlayed = null;
         lastPlayed = Time.millis();
+        gameMusic.clear();
+        customBossMusic.clear();
         ambientMusic = new Seq<>();
         darkMusic = new Seq<>();
         bossMusic = new Seq<>();
-        gameMusic.clear();
-        customBossMusic.clear();
         gameIndex = 0;
         bossPlaying = false;
         lastBossMusic = null;
@@ -89,8 +88,7 @@ public class BNMusic extends SoundControl{
             };
         }
         Events.fire(new MusicRegisterEvent());
-        initialized = true;
-        Log.info("[BNMusic] reload: loading 27 game music and 3 boss music.");
+        Log.info("[BNMusic] reload: loading game1-game27 and boss1-boss3.");
     }
     @Override
     public void update(){
@@ -169,6 +167,7 @@ public class BNMusic extends SoundControl{
             return;
         }
         if(gameMusic.isEmpty()){
+            Log.warn("[BNMusic] No game music loaded.");
             return;
         }
         if(gameIndex >= gameMusic.size){
@@ -182,11 +181,11 @@ public class BNMusic extends SoundControl{
         }
         music.setLooping(false);
         play(music);
-        Log.info("[BNMusic] Playing game music: @", gameIndex);
+        Log.info("[BNMusic] Playing game music: @ / @", gameIndex, gameMusic.size);
     }
     private void playBossMusic(){
         if(customBossMusic.isEmpty()){
-            Log.warn("[BNMusic] Boss detected but no boss music is loaded.");
+            Log.warn("[BNMusic] No boss music loaded.");
             return;
         }
         Music music;
