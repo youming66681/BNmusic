@@ -8,6 +8,7 @@ import mindustry.Vars;
 import mindustry.game.EventType;
 import mindustry.gen.Groups;
 import mindustry.gen.Unit;
+import arc.util.Log;
 
 public class BNMusic{
     private static final Seq<Music> gameMusic = new Seq<>();
@@ -67,7 +68,7 @@ public class BNMusic{
         }
     }
     private static boolean isBoss(Unit unit){
-        return unit.type.boss;
+        return unit.type.name.contains("boss");
     }
     private static void playNextGame(){
         if(gameMusic.isEmpty())return;
