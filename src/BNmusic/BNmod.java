@@ -10,8 +10,6 @@ import mindustry.mod.Mod;
 import mindustry.mod.Mods;
 import arc.audio.Sound;
 
-import BNmusic.content.BNMusic;
-
 public class BNmod extends Mod {
     public static Mods.LoadedMod ML;
     public static final String ModName = "BNmod";
@@ -24,6 +22,5 @@ public class BNmod extends Mod {
     public void loadContent() {
         mod = Vars.mods.getMod(this.getClass());
 
-        BNMusic.load();
     }
 }
