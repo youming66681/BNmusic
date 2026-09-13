@@ -1,4 +1,5 @@
 package BNmusic.content;
+
 import arc.Core;
 import arc.Events;
 import arc.audio.Music;
@@ -13,6 +14,7 @@ import mindustry.game.EventType.Trigger;
 import mindustry.game.EventType.WorldLoadEvent;
 import mindustry.ui.Styles;
 import mindustry.ui.dialogs.BaseDialog;
+
 public class MusicPlayer{
     private static final String[] files={
             "game1","game2","game3","game4","game5","game6","game7","game8","game9",
@@ -54,8 +56,10 @@ public class MusicPlayer{
             hudTable=new Table();
             hudTable.top().right();
             hudTable.margin(8f);
-            TextButton button=hudTable.button("♫ 音乐",Styles.defaultt).size(120f,50f).get();
+            TextButton button=new TextButton("♫ 音乐",Styles.defaultt);
+            button.setSize(120f,50f);
             button.clicked(MusicPlayer::openPlayerUI);
+            hudTable.add(button).size(120f,50f);
             Vars.ui.hudGroup.addChild(hudTable);
             hudReady=true;
             Log.info("[MusicPlayer] HUD音乐按钮创建成功");
@@ -236,7 +240,7 @@ public class MusicPlayer{
         Table cont=playerDialog.cont;
         cont.pane(pane->{
             pane.table(t->{
-                t.label(()->files.length==0?"没有音乐":names[currentIndex]).fontScale(1.3f).padBottom(8f).row();
+                t.label(()->files.length==0?"没有音乐":names).fontScale(1.3f).padBottom(8f).row();
                 t.label(()->(currentIndex+1)+" / "+files.length).padBottom(10f).row();
                 t.table(volT->{
                     volT.add("音量").padRight(10f);
@@ -279,7 +283,7 @@ public class MusicPlayer{
                 t.pane(listPane->{
                     for(int i=0;i<files.length;i++){
                         final int index=i;
-                        listPane.button(index==currentIndex?"▶ "+names[index]:names[index],()->{
+                        listPane.button(index==currentIndex?"▶ "+names[index]:names,()->{
                             currentIndex=index;
                             loadTrack();
                         }).growX().height(42f).pad(3f).row();
