@@ -3,10 +3,6 @@ package BNmusic.content;
 import arc.Core;
 import arc.Events;
 import arc.audio.Music;
-import arc.math.Mathf;
-import arc.scene.event.InputEvent;
-import arc.scene.event.InputListener;
-import arc.scene.ui.Slider;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
 import arc.util.Log;
@@ -16,7 +12,6 @@ import mindustry.game.EventType.GameOverEvent;
 import mindustry.game.EventType.Trigger;
 import mindustry.game.EventType.WorldLoadEvent;
 import mindustry.ui.Styles;
-import mindustry.ui.dialogs.BaseDialog;
 
 public class MusicPlayer{
     private static final String[] files={
@@ -34,104 +29,30 @@ public class MusicPlayer{
     private static int currentIndex=0;
     private static float volume=0.7f;
     private static Music currentMusic;
-    private static BaseDialog playerDialog;
-    private static Slider progressSlider;
-    private static Slider volumeSlider;
     private static boolean shuffle=false;
     private static boolean loopSingle=false;
-    private static TextButton hudButton;
+    private static Table musicTable;
     private static TextButton playButton;
     private static TextButton shuffleButton;
     private static TextButton loopButton;
-    private static boolean hudReady=false;
-    private static boolean dragging=false;
-    private static float touchStartX;
-    private static float touchStartY;
-    private static float buttonStartX;
-    private static float buttonStartY;
+    private static boolean loaded=false;
+    private static boolean injected=false;
     public static void load(){
-        Events.on(ClientLoadEvent.class,e->createHudButton());
+        Events.on(ClientLoadEvent.class,e->{
+            injectIntoSettings();
+        });
         Events.on(GameOverEvent.class,e->stop());
         Events.on(WorldLoadEvent.class,e->stop());
         Events.run(Trigger.update,MusicPlayer::update);
         Log.info("[MusicPlayer] 音乐播放器已加载");
         Log.info("[MusicPlayer] 共 "+files.length+" 首音乐");
     }
-    private static void createHudButton(){
-        if(hudReady)return;
-        if(Core.scene==null)return;
-        try{
-            hudButton=new TextButton("♫ 音乐",Styles.defaultt);
-            hudButton.setSize(120f,50f);
-            setButtonPosition();
-            hudButton.addListener(new InputListener(){
-                public boolean touchDown(InputEvent event,float x,float y,int pointer,int buttonCode){
-                    if(pointer!=0)return false;
-                    dragging=false;
-                    touchStartX=event.stageX;
-                    touchStartY=event.stageY;
-                    buttonStartX=hudButton.x;
-                    buttonStartY=hudButton.y;
-                    return true;
-                }
-                public void touchDragged(InputEvent event,float x,float y,int pointer){
-                    if(pointer!=0)return;
-                    float dx=event.stageX-touchStartX;
-                    float dy=event.stageY-touchStartY;
-                    if(Math.abs(dx)>8f||Math.abs(dy)>8f){
-                        dragging=true;
-                    }
-                    if(!dragging)return;
-                    float nx=buttonStartX+dx;
-                    float ny=buttonStartY+dy;
-                    nx=Mathf.clamp(nx,0f,Core.scene.getWidth()-hudButton.getWidth());
-                    ny=Mathf.clamp(ny,0f,Core.scene.getHeight()-hudButton.getHeight());
-                    hudButton.setPosition(nx,ny);
-                }
-                public void touchUp(InputEvent event,float x,float y,int pointer,int buttonCode){
-                    if(pointer!=0)return;
-                    if(!dragging){
-                        openPlayerUI();
-                    }
-                    dragging=false;
-                }
-            });
-            Core.scene.add(hudButton);
-            hudReady=true;
-            updateHudVisibility();
-            Log.info("[MusicPlayer] HUD音乐按钮创建成功");
-        }catch(Throwable t){
-            Log.err("[MusicPlayer] HUD音乐按钮创建失败");
-            Log.err(t);
-        }
-    }
-    private static void setButtonPosition(){
-        if(hudButton==null||Core.scene==null)return;
-        float x=15f;
-        float y=15f;
-        if(Core.scene.getWidth()>0f){
-            x=Mathf.clamp(x,0f,Core.scene.getWidth()-hudButton.getWidth());
-        }
-        if(Core.scene.getHeight()>0f){
-            y=Mathf.clamp(y,0f,Core.scene.getHeight()-hudButton.getHeight());
-        }
-        hudButton.setPosition(x,y);
-    }
     private static void update(){
-        if(!hudReady){
-            createHudButton();
+        if(!injected){
+            injectIntoSettings();
         }
-        updateHudVisibility();
-        updateButtonTexts();
         if(currentMusic==null)return;
         try{
-            if(progressSlider!=null){
-                float length=currentMusic.getLength();
-                float position=currentMusic.getPosition();
-                if(length>0f){
-                    progressSlider.setValue(position/length);
-                }
-            }
             if(!loopSingle){
                 float length=currentMusic.getLength();
                 float position=currentMusic.getPosition();
@@ -140,18 +61,89 @@ public class MusicPlayer{
                 }
             }
         }catch(Throwable ignored){}
+        updateButtons();
     }
-    private static void updateHudVisibility(){
-        if(hudButton==null)return;
+    private static void injectIntoSettings(){
+        if(injected)return;
+        if(Vars.ui==null)return;
+        if(Vars.ui.settings==null)return;
+        if(Vars.ui.settings.sound==null)return;
         try{
-            hudButton.visible=Vars.state!=null&&Vars.state.isGame()&&!Vars.ui.consolefrag.shown();
-        }catch(Throwable ignored){
-            try{
-                hudButton.visible=Vars.state!=null&&Vars.state.isGame();
-            }catch(Throwable ignored2){}
+            musicTable=new Table();
+            musicTable.left();
+            musicTable.defaults().left();
+            musicTable.add("音乐播放器").fontScale(1.2f).padTop(20f).padBottom(8f).row();
+            musicTable.add("当前音乐：").padBottom(3f).row();
+            musicTable.add(() -> names[currentIndex]).padBottom(8f).row();
+            musicTable.table(t->{
+                t.defaults().size(100f,50f).pad(3f);
+                t.button("上一曲",MusicPlayer::prevTrack);
+                playButton=t.button("播放",MusicPlayer::togglePlay).get();
+                t.button("下一曲",MusicPlayer::nextTrack);
+            }).padBottom(5f).row();
+            musicTable.table(t->{
+                t.defaults().size(100f,45f).pad(3f);
+                t.button("停止",MusicPlayer::stop);
+                shuffleButton=t.button("随机：关",MusicPlayer::toggleShuffle).get();
+                loopButton=t.button("单曲：关",MusicPlayer::toggleLoop).get();
+            }).padBottom(8f).row();
+            musicTable.add("音乐列表").padTop(5f).padBottom(5f).row();
+            musicTable.pane(list->{
+                for(int i=0;i<files.length;i++){
+                    final int index=i;
+                    list.button(index==currentIndex?"▶ "+names[index]:names[index],Styles.flatt,()->{
+                        currentIndex=index;
+                        loadTrack();
+                        rebuildMusicList();
+                    }).growX().height(42f).pad(2f).row();
+                }
+            }).width(340f).height(280f).padBottom(10f).row();
+            musicTable.add("提示：音乐文件放在 assets/music/").padBottom(5f).row();
+            Vars.ui.settings.sound.add(musicTable).padTop(10f).row();
+            injected=true;
+            Log.info("[MusicPlayer] 已注入原版设置 → 音频");
+        }catch(Throwable t){
+            Log.err("[MusicPlayer] 注入原版音频设置失败");
+            Log.err(t);
         }
     }
-    private static void updateButtonTexts(){
+    private static void rebuildMusicList(){
+        if(musicTable==null)return;
+        try{
+            musicTable.clearChildren();
+            musicTable.add("音乐播放器").fontScale(1.2f).padTop(20f).padBottom(8f).row();
+            musicTable.add("当前音乐：").padBottom(3f).row();
+            musicTable.add(() -> names[currentIndex]).padBottom(8f).row();
+            musicTable.table(t->{
+                t.defaults().size(100f,50f).pad(3f);
+                t.button("上一曲",MusicPlayer::prevTrack);
+                playButton=t.button(isPlaying()?"暂停":"播放",MusicPlayer::togglePlay).get();
+                t.button("下一曲",MusicPlayer::nextTrack);
+            }).padBottom(5f).row();
+            musicTable.table(t->{
+                t.defaults().size(100f,45f).pad(3f);
+                t.button("停止",MusicPlayer::stop);
+                shuffleButton=t.button(shuffle?"随机：开":"随机：关",MusicPlayer::toggleShuffle).get();
+                loopButton=t.button(loopSingle?"单曲：开":"单曲：关",MusicPlayer::toggleLoop).get();
+            }).padBottom(8f).row();
+            musicTable.add("音乐列表").padTop(5f).padBottom(5f).row();
+            musicTable.pane(list->{
+                for(int i=0;i<files.length;i++){
+                    final int index=i;
+                    list.button(index==currentIndex?"▶ "+names[index]:names[index],Styles.flatt,()->{
+                        currentIndex=index;
+                        loadTrack();
+                        rebuildMusicList();
+                    }).growX().height(42f).pad(2f).row();
+                }
+            }).width(340f).height(280f).padBottom(10f).row();
+            musicTable.add("提示：音乐文件放在 assets/music/").padBottom(5f).row();
+        }catch(Throwable t){
+            Log.err("[MusicPlayer] 刷新音乐列表失败");
+            Log.err(t);
+        }
+    }
+    private static void updateButtons(){
         if(playButton!=null){
             try{
                 playButton.setText(isPlaying()?"暂停":"播放");
@@ -213,10 +205,9 @@ public class MusicPlayer{
             currentMusic.setVolume(volume);
             currentMusic.setLooping(loopSingle);
             currentMusic.play();
-            if(progressSlider!=null){
-                progressSlider.setValue(0f);
-            }
+            loaded=true;
             Log.info("[MusicPlayer] 播放: "+names[currentIndex]);
+            updateButtons();
         }catch(Throwable t){
             Log.err("[MusicPlayer] 播放失败: "+file);
             Log.err(t);
@@ -238,7 +229,7 @@ public class MusicPlayer{
             Log.err("[MusicPlayer] 播放控制失败");
             Log.err(t);
         }
-        updateButtonTexts();
+        updateButtons();
     }
     private static void prevTrack(){
         if(files.length==0)return;
@@ -248,6 +239,7 @@ public class MusicPlayer{
             currentIndex=(currentIndex-1+files.length)%files.length;
         }
         loadTrack();
+        rebuildMusicList();
     }
     private static void nextTrack(){
         if(files.length==0)return;
@@ -257,6 +249,7 @@ public class MusicPlayer{
             currentIndex=(currentIndex+1)%files.length;
         }
         loadTrack();
+        rebuildMusicList();
     }
     private static void randomTrack(){
         if(files.length<=1){
@@ -275,11 +268,11 @@ public class MusicPlayer{
                 currentMusic.stop();
             }catch(Throwable ignored){}
         }
-        updateButtonTexts();
+        updateButtons();
     }
     private static void toggleShuffle(){
         shuffle=!shuffle;
-        updateButtonTexts();
+        updateButtons();
     }
     private static void toggleLoop(){
         loopSingle=!loopSingle;
@@ -288,70 +281,6 @@ public class MusicPlayer{
                 currentMusic.setLooping(loopSingle);
             }catch(Throwable ignored){}
         }
-        updateButtonTexts();
-    }
-    private static void openPlayerUI(){
-        if(playerDialog!=null){
-            playerDialog.show();
-            updateButtonTexts();
-            return;
-        }
-        playerDialog=new BaseDialog("音乐播放器");
-        Table cont=playerDialog.cont;
-        cont.pane(pane->{
-            pane.table(t->{
-                t.label(()->files.length==0?"没有音乐":names[currentIndex]).fontScale(1.3f).padBottom(8f).row();
-                t.label(()->(currentIndex+1)+" / "+files.length).padBottom(10f).row();
-                t.table(volT->{
-                    volT.add("音量").padRight(10f);
-                    volumeSlider=new Slider(0f,1f,0.01f,false);
-                    volumeSlider.setValue(volume);
-                    volumeSlider.changed(()->{
-                        volume=volumeSlider.getValue();
-                        if(currentMusic!=null){
-                            try{
-                                currentMusic.setVolume(volume);
-                            }catch(Throwable ignored){}
-                        }
-                    });
-                    volT.add(volumeSlider).width(240f);
-                }).padBottom(12f).row();
-                t.add("播放进度").padBottom(5f).row();
-                progressSlider=new Slider(0f,1f,0.001f,false);
-                progressSlider.setValue(0f);
-                progressSlider.changed(()->{
-                    if(currentMusic==null)return;
-                    try{
-                        float length=currentMusic.getLength();
-                        if(length>0f){
-                            currentMusic.setPosition(progressSlider.getValue()*length);
-                        }
-                    }catch(Throwable ignored){}
-                });
-                t.add(progressSlider).width(300f).padBottom(15f).row();
-                t.table(btnT->{
-                    btnT.button("上一曲",MusicPlayer::prevTrack).size(90f,55f);
-                    playButton=btnT.button(isPlaying()?"暂停":"播放",MusicPlayer::togglePlay).size(90f,55f).get();
-                    btnT.button("下一曲",MusicPlayer::nextTrack).size(90f,55f);
-                }).padBottom(8f).row();
-                t.table(btnT->{
-                    btnT.button("停止",MusicPlayer::stop).size(90f,45f);
-                    shuffleButton=btnT.button(shuffle?"随机：开":"随机：关",MusicPlayer::toggleShuffle).size(90f,45f).get();
-                    loopButton=btnT.button(loopSingle?"单曲：开":"单曲：关",MusicPlayer::toggleLoop).size(90f,45f).get();
-                }).padBottom(12f).row();
-                t.add("曲目列表").padBottom(8f).row();
-                t.pane(listPane->{
-                    for(int i=0;i<files.length;i++){
-                        final int index=i;
-                        listPane.button(index==currentIndex?"▶ "+names[index]:names[index],()->{
-                            currentIndex=index;
-                            loadTrack();
-                        }).growX().height(42f).pad(3f).row();
-                    }
-                }).width(330f).height(260f);
-            }).pad(15f);
-        });
-        playerDialog.addCloseButton();
-        playerDialog.show();
+        updateButtons();
     }
 }
