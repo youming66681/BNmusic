@@ -37,6 +37,7 @@ public class MusicPlayer{
     private static TextButton loopButton;
     private static boolean loaded=false;
     private static boolean injected=false;
+    private static Label currentMusicLabel;
     public static void load(){
         Events.on(ClientLoadEvent.class,e->{
             injectIntoSettings();
@@ -72,7 +73,8 @@ public class MusicPlayer{
             musicTable=new Table();
             musicTable.left();
             musicTable.defaults().left();
-            musicTable.add("音乐播放器").fontScale(1.2f).padTop(20f).padBottom(8f).row();
+            currentMusicLabel=musicTable.add(names[currentIndex]).padBottom(8f).get();
+            currentMusicLabel.row();
             musicTable.add("当前音乐：").padBottom(3f).row();
             musicTable.add(() -> names[currentIndex]).padBottom(8f).row();
             musicTable.table(t->{
@@ -110,7 +112,8 @@ public class MusicPlayer{
     private static void rebuildMusicList(){
         if(musicTable==null)return;
         try{
-            musicTable.clearChildren();
+            currentMusicLabel=musicTable.add(names[currentIndex]).padBottom(8f).get();
+            musicTable.row();
             musicTable.add("音乐播放器").fontScale(1.2f).padTop(20f).padBottom(8f).row();
             musicTable.add("当前音乐：").padBottom(3f).row();
             musicTable.add(() -> names[currentIndex]).padBottom(8f).row();
