@@ -1,22 +1,24 @@
 package BNmusic;
 import arc.Core;
 import arc.Events;
+import arc.graphics.Color;
 import arc.scene.ui.ImageButton;
 import arc.scene.ui.layout.Table;
 import arc.util.Log;
 import mindustry.Vars;
 import mindustry.game.EventType.ClientLoadEvent;
 import mindustry.game.EventType.Trigger;
+import mindustry.gen.Icon;
 import mindustry.mod.Mod;
 import mindustry.mod.Mods;
 import mindustry.ui.Styles;
-import mindustry.gen.Icon;
 import BNmusic.content.MapBuildingClipboard;
 public class BNmod extends Mod{
     public static Mods.LoadedMod ML;
     public static final String ModName = "BNmod";
     public static Mods.LoadedMod mod;
     private static boolean buttonAdded = false;
+    private static Table buttonTable;
     public BNmod(){
     }
     public static String name(String add){
@@ -30,47 +32,45 @@ public class BNmod extends Mod{
     public void init(){
         Vars.maxSchematicSize = 32768;
         Events.on(ClientLoadEvent.class, event -> {
-            addMobileButton();
+            addButton();
         });
         Events.run(Trigger.update, () -> {
-            if(!buttonAdded && Vars.ui != null && Vars.ui.hudfrag != null){
-                addMobileButton();
+            if(!buttonAdded){
+                addButton();
+            }
+            if(buttonTable != null){
+                buttonTable.visible = Vars.state.isGame();
             }
         });
-        Log.info("[BNmod] BNmod 建筑蓝图系统已加载");
+        Log.info("[BNmod] 建筑蓝图系统已加载");
     }
-    private static void addMobileButton(){
+    private static void addButton(){
         if(buttonAdded) return;
+        if(Core.scene == null) return;
         if(Vars.ui == null) return;
-        if(Vars.ui.hudfrag == null) return;
-        Table hud = Vars.ui.hudfrag;
         try{
-            Table table = findButtonTable(hud);
-            if(table == null){
-                Log.warn("[BNmod] 找不到 HUD 按钮区域");
-                return;
-            }
-            ImageButton button = new ImageButton(Icon.save, Styles.clearNonei);
+            buttonTable = new Table();
+            buttonTable.setFillParent(true);
+            buttonTable.top().right();
+            buttonTable.margin(90f, 12f, 12f, 12f);
+            ImageButton button = new ImageButton(
+                    Icon.save,
+                    Styles.clearNonei
+            );
+            button.resizeImage(26f);
+            button.setColor(Color.white);
             button.clicked(() -> {
+                if(!Vars.state.isGame()){
+                    return;
+                }
                 MapBuildingClipboard.showDialog();
             });
-            button.resizeImage(24f);
-            button.setName("bnmod-building-clipboard");
-            table.add(button).size(50f).pad(2f);
+            buttonTable.add(button).size(54f);
+            Core.scene.add(buttonTable);
             buttonAdded = true;
-            Log.info("[BNmod] 已添加移动端建筑蓝图按钮");
+            Log.info("[BNmod] 移动端建筑蓝图按钮创建成功");
         }catch(Throwable e){
-            Log.err("[BNmod] 添加建筑蓝图按钮失败", e);
+            Log.err("[BNmod] 创建建筑蓝图按钮失败", e);
         }
-    }
-    private static Table findButtonTable(Table root){
-        if(root == null) return null;
-        Table result = null;
-        try{
-            root.getChildren().each(child -> {
-            });
-        }catch(Throwable ignored){
-        }
-        return root;
     }
 }

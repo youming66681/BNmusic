@@ -2,7 +2,6 @@ package BNmusic.content;
 import arc.Core;
 import arc.files.Fi;
 import arc.scene.ui.Dialog;
-import arc.scene.ui.layout.Table;
 import arc.struct.IntSet;
 import arc.struct.Seq;
 import arc.util.Log;
@@ -119,6 +118,7 @@ public class MapBuildingClipboard{
                 }catch(Throwable e){
                     skipped++;
                     Log.err("[BNmod] 加载建筑失败：@ @ @", data.block.name, data.x, data.y);
+                    Log.err(e);
                 }
             }
             toast("BNmod：加载 " + loaded + " 个，跳过 " + skipped + " 个");
@@ -199,7 +199,7 @@ public class MapBuildingClipboard{
                 int rotation = input.readUnsignedByte();
                 int teamId = input.readUnsignedByte();
                 Team team = teamId == 255 ? Team.derelict : Team.get(teamId);
-                Object config = TypeIO.readObject(read, false);
+                Object config = TypeIO.readObject(read);
                 if(block != null){
                     clipboard.add(new BuildingData(
                             block,
@@ -235,20 +235,10 @@ public class MapBuildingClipboard{
         toast("BNmod：已删除保存的蓝图");
     }
     private static void toast(String text){
-        if(Core.scene != null){
-            Core.scene.addAction(new arc.scene.actions.DelayAction(){
-                {
-                    setDuration(0.01f);
-                }
-                @Override
-                protected void complete(){
-                    if(Vars.ui != null && Vars.ui.hudfrag != null){
-                        Vars.ui.hudfrag.showToast(text);
-                    }
-                }
-            });
-        }
         Log.info(text);
+        if(Vars.ui != null && Vars.ui.hudfrag != null){
+            Vars.ui.hudfrag.showToast(text);
+        }
     }
     public static void showDialog(){
         if(Core.scene == null) return;
