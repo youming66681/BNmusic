@@ -65,7 +65,6 @@ public class MusicPlayer{
             final float[] startY={0f};
             final boolean[] moved={false};
             button.addListener(new InputListener(){
-                @Override
                 public boolean touchDown(InputEvent event,float x,float y,int pointer,int buttonCode){
                     if(pointer!=0)return false;
                     downX[0]=x;
@@ -75,7 +74,6 @@ public class MusicPlayer{
                     moved[0]=false;
                     return true;
                 }
-                @Override
                 public void touchDragged(InputEvent event,float x,float y,int pointer){
                     if(pointer!=0)return;
                     float dx=x-downX[0];
