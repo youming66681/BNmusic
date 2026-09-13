@@ -23,6 +23,9 @@ public class BNmod extends Mod {
     public void loadContent() {
         mod = Vars.mods.getMod(this.getClass());
 
-        Vars.maxSchematicSize = 2048;
+    }
+    @Override
+    public void init(){
+        Vars.maxSchematicSize = 32768;
     }
 }
