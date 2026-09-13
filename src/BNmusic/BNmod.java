@@ -79,7 +79,6 @@ public class BNmod extends Mod{
 
         buttonTable.addListener(new InputListener(){
 
-            @Override
             public boolean touchDown(InputEvent event,float x,float y,int pointer,int button){
                 if(pointer!=0)return false;
 
@@ -124,7 +123,6 @@ public class BNmod extends Mod{
                 buttonY=ny;
             }
 
-            @Override
             public void touchUp(InputEvent event,float x,float y,int pointer,int button){
                 if(pointer!=0)return;
             }
