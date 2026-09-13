@@ -3,6 +3,9 @@ package BNmusic.content;
 import arc.Core;
 import arc.Events;
 import arc.audio.Music;
+import arc.math.Mathf;
+import arc.scene.event.InputEvent;
+import arc.scene.event.InputListener;
 import arc.scene.ui.Slider;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
@@ -14,9 +17,6 @@ import mindustry.game.EventType.Trigger;
 import mindustry.game.EventType.WorldLoadEvent;
 import mindustry.ui.Styles;
 import mindustry.ui.dialogs.BaseDialog;
-import arc.scene.event.InputEvent;
-import arc.scene.event.InputListener;
-import arc.math.Mathf;
 
 public class MusicPlayer{
     private static final String[] files={
@@ -39,11 +39,16 @@ public class MusicPlayer{
     private static Slider volumeSlider;
     private static boolean shuffle=false;
     private static boolean loopSingle=false;
-    private static Table hudTable;
+    private static TextButton hudButton;
     private static TextButton playButton;
     private static TextButton shuffleButton;
     private static TextButton loopButton;
     private static boolean hudReady=false;
+    private static boolean dragging=false;
+    private static float touchStartX;
+    private static float touchStartY;
+    private static float buttonStartX;
+    private static float buttonStartY;
     public static void load(){
         Events.on(ClientLoadEvent.class,e->createHudButton());
         Events.on(GameOverEvent.class,e->stop());
@@ -54,57 +59,72 @@ public class MusicPlayer{
     }
     private static void createHudButton(){
         if(hudReady)return;
-        if(Vars.ui==null||Vars.ui.hudGroup==null)return;
+        if(Core.scene==null)return;
         try{
-            TextButton button=new TextButton("♫ 音乐",Styles.defaultt);
-            button.setSize(120f,50f);
-            button.setPosition(15f,15f);
-            final float[] downX={0f};
-            final float[] downY={0f};
-            final float[] startX={0f};
-            final float[] startY={0f};
-            final boolean[] moved={false};
-            button.addListener(new InputListener(){
+            hudButton=new TextButton("♫ 音乐",Styles.defaultt);
+            hudButton.setSize(120f,50f);
+            setButtonPosition();
+            hudButton.addListener(new InputListener(){
+                @Override
                 public boolean touchDown(InputEvent event,float x,float y,int pointer,int buttonCode){
                     if(pointer!=0)return false;
-                    downX[0]=x;
-                    downY[0]=y;
-                    startX[0]=button.x;
-                    startY[0]=button.y;
-                    moved[0]=false;
+                    dragging=false;
+                    touchStartX=event.stageX;
+                    touchStartY=event.stageY;
+                    buttonStartX=hudButton.x;
+                    buttonStartY=hudButton.y;
                     return true;
                 }
+                @Override
                 public void touchDragged(InputEvent event,float x,float y,int pointer){
                     if(pointer!=0)return;
-                    float dx=x-downX[0];
-                    float dy=y-downY[0];
-                    if(Math.abs(dx)>8f||Math.abs(dy)>8f)moved[0]=true;
-                    if(!moved[0])return;
-                    float nx=startX[0]+dx;
-                    float ny=startY[0]+dy;
-                    nx=Mathf.clamp(nx,0f,Vars.ui.hudGroup.getWidth()-button.getWidth());
-                    ny=Mathf.clamp(ny,0f,Vars.ui.hudGroup.getHeight()-button.getHeight());
-                    button.setPosition(nx,ny);
+                    float dx=event.stageX-touchStartX;
+                    float dy=event.stageY-touchStartY;
+                    if(Math.abs(dx)>8f||Math.abs(dy)>8f){
+                        dragging=true;
+                    }
+                    if(!dragging)return;
+                    float nx=buttonStartX+dx;
+                    float ny=buttonStartY+dy;
+                    nx=Mathf.clamp(nx,0f,Core.scene.getWidth()-hudButton.getWidth());
+                    ny=Mathf.clamp(ny,0f,Core.scene.getHeight()-hudButton.getHeight());
+                    hudButton.setPosition(nx,ny);
                 }
+                @Override
                 public void touchUp(InputEvent event,float x,float y,int pointer,int buttonCode){
                     if(pointer!=0)return;
-                    if(!moved[0]){
+                    if(!dragging){
                         openPlayerUI();
                     }
+                    dragging=false;
                 }
             });
-            Vars.ui.hudGroup.addChild(button);
+            Core.scene.add(hudButton);
             hudReady=true;
+            updateHudVisibility();
             Log.info("[MusicPlayer] HUD音乐按钮创建成功");
         }catch(Throwable t){
             Log.err("[MusicPlayer] HUD音乐按钮创建失败");
             Log.err(t);
         }
     }
+    private static void setButtonPosition(){
+        if(hudButton==null||Core.scene==null)return;
+        float x=15f;
+        float y=15f;
+        if(Core.scene.getWidth()>0f){
+            x=Mathf.clamp(x,0f,Core.scene.getWidth()-hudButton.getWidth());
+        }
+        if(Core.scene.getHeight()>0f){
+            y=Mathf.clamp(y,0f,Core.scene.getHeight()-hudButton.getHeight());
+        }
+        hudButton.setPosition(x,y);
+    }
     private static void update(){
         if(!hudReady){
             createHudButton();
         }
+        updateHudVisibility();
         updateButtonTexts();
         if(currentMusic==null)return;
         try{
@@ -123,6 +143,16 @@ public class MusicPlayer{
                 }
             }
         }catch(Throwable ignored){}
+    }
+    private static void updateHudVisibility(){
+        if(hudButton==null)return;
+        try{
+            hudButton.visible=Vars.state!=null&&Vars.state.isGame()&&!Vars.ui.consolefrag.shown();
+        }catch(Throwable ignored){
+            try{
+                hudButton.visible=Vars.state!=null&&Vars.state.isGame();
+            }catch(Throwable ignored2){}
+        }
     }
     private static void updateButtonTexts(){
         if(playButton!=null){
