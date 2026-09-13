@@ -65,7 +65,6 @@ public class MusicPlayer{
             hudButton.setSize(120f,50f);
             setButtonPosition();
             hudButton.addListener(new InputListener(){
-                @Override
                 public boolean touchDown(InputEvent event,float x,float y,int pointer,int buttonCode){
                     if(pointer!=0)return false;
                     dragging=false;
@@ -75,7 +74,6 @@ public class MusicPlayer{
                     buttonStartY=hudButton.y;
                     return true;
                 }
-                @Override
                 public void touchDragged(InputEvent event,float x,float y,int pointer){
                     if(pointer!=0)return;
                     float dx=event.stageX-touchStartX;
@@ -90,7 +88,6 @@ public class MusicPlayer{
                     ny=Mathf.clamp(ny,0f,Core.scene.getHeight()-hudButton.getHeight());
                     hudButton.setPosition(nx,ny);
                 }
-                @Override
                 public void touchUp(InputEvent event,float x,float y,int pointer,int buttonCode){
                     if(pointer!=0)return;
                     if(!dragging){
