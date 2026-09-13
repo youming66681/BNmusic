@@ -1,28 +1,43 @@
 package BNmusic.content;
-
 import arc.Core;
-import arc.audio.Music;
 import arc.Events;
+import arc.audio.Music;
 import arc.scene.ui.Slider;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
 import arc.util.Log;
 import mindustry.Vars;
-import mindustry.game.EventType.*;
+import mindustry.game.EventType.ClientLoadEvent;
+import mindustry.game.EventType.GameOverEvent;
+import mindustry.game.EventType.Trigger;
+import mindustry.game.EventType.WorldLoadEvent;
 import mindustry.ui.Styles;
-
+import mindustry.ui.dialogs.BaseDialog;
 public class MusicPlayer{
-    private static final String[] files={"game1","game2","game3","game4","game5","game6","game7","game8","game9","game10","game11","game12","game13","game14","game15","game16","game17","game18","game19","game20","game21","game22","game23","game24","game25","game26","game27"};
-    private static final String[] names={"音乐1","音乐2","音乐3","音乐4","音乐5","音乐6","音乐7","音乐8","音乐9","音乐10","音乐11","音乐12","音乐13","音乐14","音乐15","音乐16","音乐17","音乐18","音乐19","音乐20","音乐21","音乐22","音乐23","音乐24","音乐25","音乐26","音乐27"};
+    private static final String[] files={
+            "game1","game2","game3","game4","game5","game6","game7","game8","game9",
+            "game10","game11","game12","game13","game14","game15","game16","game17",
+            "game18","game19","game20","game21","game22","game23","game24","game25",
+            "game26","game27"
+    };
+    private static final String[] names={
+            "音乐1","音乐2","音乐3","音乐4","音乐5","音乐6","音乐7","音乐8","音乐9",
+            "音乐10","音乐11","音乐12","音乐13","音乐14","音乐15","音乐16","音乐17",
+            "音乐18","音乐19","音乐20","音乐21","音乐22","音乐23","音乐24","音乐25",
+            "音乐26","音乐27"
+    };
     private static int currentIndex=0;
     private static float volume=0.7f;
     private static Music currentMusic;
-    private static mindustry.ui.dialogs.BaseDialog playerDialog;
+    private static BaseDialog playerDialog;
     private static Slider progressSlider;
     private static Slider volumeSlider;
     private static boolean shuffle=false;
     private static boolean loopSingle=false;
-    private static TextButton hudButton;
+    private static Table hudTable;
+    private static TextButton playButton;
+    private static TextButton shuffleButton;
+    private static TextButton loopButton;
     private static boolean hudReady=false;
     public static void load(){
         Events.on(ClientLoadEvent.class,e->createHudButton());
@@ -36,16 +51,16 @@ public class MusicPlayer{
         if(hudReady)return;
         if(Vars.ui==null||Vars.ui.hudGroup==null)return;
         try{
-            hudButton=new TextButton("♫ 音乐",Styles.defaultt);
-            hudButton.setSize(120f,50f);
-            hudButton.clicked(MusicPlayer::openPlayerUI);
-            Vars.ui.hudGroup.addChild(hudButton);
-            hudButton.setPosition(Core.graphics.getWidth()-130f,20f);
-            hudButton.visible=true;
+            hudTable=new Table();
+            hudTable.top().right();
+            hudTable.margin(8f);
+            TextButton button=hudTable.button("♫ 音乐",Styles.defaultt).size(120f,50f).get();
+            button.clicked(MusicPlayer::openPlayerUI);
+            Vars.ui.hudGroup.addChild(hudTable);
             hudReady=true;
-            Log.info("[MusicPlayer] HUD按钮创建成功");
+            Log.info("[MusicPlayer] HUD音乐按钮创建成功");
         }catch(Throwable t){
-            Log.err("[MusicPlayer] HUD按钮创建失败");
+            Log.err("[MusicPlayer] HUD音乐按钮创建失败");
             Log.err(t);
         }
     }
@@ -53,11 +68,7 @@ public class MusicPlayer{
         if(!hudReady){
             createHudButton();
         }
-        if(hudButton!=null){
-            try{
-                hudButton.setPosition(Core.graphics.getWidth()-130f,20f);
-            }catch(Throwable ignored){}
-        }
+        updateButtonTexts();
         if(currentMusic==null)return;
         try{
             if(progressSlider!=null){
@@ -76,13 +87,42 @@ public class MusicPlayer{
             }
         }catch(Throwable ignored){}
     }
-    private static Music getMusic(String name){
-        Music music=Core.assets.getOrNull("music/"+name+".ogg",Music.class);
-        if(music!=null)return music;
-        music=Core.assets.getOrNull("music/"+name+".mp3",Music.class);
-        if(music!=null)return music;
+    private static void updateButtonTexts(){
+        if(playButton!=null){
+            try{
+                playButton.setText(isPlaying()?"暂停":"播放");
+            }catch(Throwable ignored){}
+        }
+        if(shuffleButton!=null){
+            try{
+                shuffleButton.setText(shuffle?"随机：开":"随机：关");
+            }catch(Throwable ignored){}
+        }
+        if(loopButton!=null){
+            try{
+                loopButton.setText(loopSingle?"单曲：开":"单曲：关");
+            }catch(Throwable ignored){}
+        }
+    }
+    private static boolean isPlaying(){
+        if(currentMusic==null)return false;
         try{
-            return Vars.tree.loadMusic("music/"+name);
+            return currentMusic.isPlaying();
+        }catch(Throwable ignored){
+            return false;
+        }
+    }
+    private static Music getMusic(String name){
+        try{
+            Music music=Core.assets.getOrNull("music/"+name+".ogg",Music.class);
+            if(music!=null)return music;
+        }catch(Throwable ignored){}
+        try{
+            Music music=Core.assets.getOrNull("music/"+name+".mp3",Music.class);
+            if(music!=null)return music;
+        }catch(Throwable ignored){}
+        try{
+            return Vars.tree.loadMusic(name);
         }catch(Throwable t){
             Log.err("[MusicPlayer] 无法加载音乐: "+name);
             Log.err(t);
@@ -109,6 +149,9 @@ public class MusicPlayer{
             currentMusic.setVolume(volume);
             currentMusic.setLooping(loopSingle);
             currentMusic.play();
+            if(progressSlider!=null){
+                progressSlider.setValue(0f);
+            }
             Log.info("[MusicPlayer] 播放: "+names[currentIndex]);
         }catch(Throwable t){
             Log.err("[MusicPlayer] 播放失败: "+file);
@@ -131,6 +174,7 @@ public class MusicPlayer{
             Log.err("[MusicPlayer] 播放控制失败");
             Log.err(t);
         }
+        updateButtonTexts();
     }
     private static void prevTrack(){
         if(files.length==0)return;
@@ -167,13 +211,28 @@ public class MusicPlayer{
                 currentMusic.stop();
             }catch(Throwable ignored){}
         }
+        updateButtonTexts();
+    }
+    private static void toggleShuffle(){
+        shuffle=!shuffle;
+        updateButtonTexts();
+    }
+    private static void toggleLoop(){
+        loopSingle=!loopSingle;
+        if(currentMusic!=null){
+            try{
+                currentMusic.setLooping(loopSingle);
+            }catch(Throwable ignored){}
+        }
+        updateButtonTexts();
     }
     private static void openPlayerUI(){
         if(playerDialog!=null){
             playerDialog.show();
+            updateButtonTexts();
             return;
         }
-        playerDialog=new mindustry.ui.dialogs.BaseDialog("音乐播放器");
+        playerDialog=new BaseDialog("音乐播放器");
         Table cont=playerDialog.cont;
         cont.pane(pane->{
             pane.table(t->{
@@ -208,20 +267,13 @@ public class MusicPlayer{
                 t.add(progressSlider).width(300f).padBottom(15f).row();
                 t.table(btnT->{
                     btnT.button("上一曲",MusicPlayer::prevTrack).size(90f,55f);
-                    TextButton playButton=btnT.button("播放",MusicPlayer::togglePlay).size(90f,55f).get();
+                    playButton=btnT.button(isPlaying()?"暂停":"播放",MusicPlayer::togglePlay).size(90f,55f).get();
                     btnT.button("下一曲",MusicPlayer::nextTrack).size(90f,55f);
                 }).padBottom(8f).row();
                 t.table(btnT->{
                     btnT.button("停止",MusicPlayer::stop).size(90f,45f);
-                    btnT.button(shuffle?"随机：开":"随机：关",()->shuffle=!shuffle).size(90f,45f).padLeft(5f).padRight(5f);
-                    btnT.button(loopSingle?"单曲：开":"单曲：关",()->{
-                        loopSingle=!loopSingle;
-                        if(currentMusic!=null){
-                            try{
-                                currentMusic.setLooping(loopSingle);
-                            }catch(Throwable ignored){}
-                        }
-                    }).size(90f,45f);
+                    shuffleButton=btnT.button(shuffle?"随机：开":"随机：关",MusicPlayer::toggleShuffle).size(90f,45f).get();
+                    loopButton=btnT.button(loopSingle?"单曲：开":"单曲：关",MusicPlayer::toggleLoop).size(90f,45f).get();
                 }).padBottom(12f).row();
                 t.add("曲目列表").padBottom(8f).row();
                 t.pane(listPane->{
