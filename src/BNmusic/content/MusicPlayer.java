@@ -6,9 +6,7 @@ import arc.audio.Music;
 import arc.scene.ui.Dialog;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
-import arc.struct.Seq;
 import arc.util.Log;
-import mindustry.Vars;
 import mindustry.game.EventType.ClientLoadEvent;
 import mindustry.game.EventType.GameOverEvent;
 import mindustry.game.EventType.Trigger;
@@ -31,8 +29,12 @@ public class MusicPlayer{
     private static int currentIndex=0;
     private static float volume=0.7f;
     private static Music currentMusic;
+    private static final Music[] musicList=new Music[files.length];
+    private static boolean musicLoaded=false;
+    private static boolean loadingMusic=false;
     private static boolean shuffle=false;
     private static boolean loopSingle=false;
+    private static boolean changingTrack=false;
     private static Dialog dialog;
     private static TextButton playButton;
     private static TextButton shuffleButton;
@@ -42,22 +44,82 @@ public class MusicPlayer{
         Events.on(ClientLoadEvent.class,e->{
             Log.info("[MusicPlayer] 音乐播放器已加载");
             Log.info("[MusicPlayer] 共 "+files.length+" 首音乐");
+            Core.app.post(MusicPlayer::loadAllMusic);
         });
         Events.on(GameOverEvent.class,e->stop());
         Events.on(WorldLoadEvent.class,e->stop());
         Events.run(Trigger.update,MusicPlayer::update);
     }
+    private static void loadAllMusic(){
+        if(loadingMusic||musicLoaded)return;
+        loadingMusic=true;
+        Log.info("[MusicPlayer] 开始加载音乐...");
+        for(int i=0;i<files.length;i++){
+            String path="music/"+files[i]+".ogg";
+            try{
+                if(Core.assets.isLoaded(path,Music.class)){
+                    musicList[i]=Core.assets.get(path,Music.class);
+                    Log.info("[MusicPlayer] 已经加载: "+path);
+                }else{
+                    Core.assets.load(path,Music.class);
+                    Log.info("[MusicPlayer] 请求加载: "+path);
+                }
+            }catch(Throwable t){
+                Log.err("[MusicPlayer] 请求加载失败: "+path);
+                Log.err(t);
+            }
+        }
+        Core.app.post(MusicPlayer::waitForMusic);
+    }
+    private static void waitForMusic(){
+        boolean allLoaded=true;
+        for(int i=0;i<files.length;i++){
+            String path="music/"+files[i]+".ogg";
+            try{
+                if(Core.assets.isLoaded(path,Music.class)){
+                    if(musicList[i]==null){
+                        musicList[i]=Core.assets.get(path,Music.class);
+                    }
+                }else{
+                    allLoaded=false;
+                }
+            }catch(Throwable t){
+                allLoaded=false;
+                Log.err("[MusicPlayer] 检查音乐失败: "+path);
+            }
+        }
+        if(!allLoaded){
+            Core.app.postDelayed(MusicPlayer::waitForMusic,5f);
+            return;
+        }
+        int loaded=0;
+        for(int i=0;i<musicList.length;i++){
+            if(musicList[i]!=null){
+                loaded++;
+                Log.info("[MusicPlayer] 已加载: "+files[i]);
+            }else{
+                Log.err("[MusicPlayer] 音乐为空: "+files[i]);
+            }
+        }
+        musicLoaded=true;
+        loadingMusic=false;
+        Log.info("[MusicPlayer] 音乐加载完成: "+loaded+"/"+files.length);
+    }
     private static void update(){
-        if(currentMusic!=null){
+        if(currentMusic!=null&&!changingTrack){
             try{
                 if(!loopSingle){
                     float length=currentMusic.getLength();
                     float position=currentMusic.getPosition();
                     if(length>0f&&position>=length-0.2f){
+                        changingTrack=true;
                         nextTrack();
+                        changingTrack=false;
                     }
                 }
-            }catch(Throwable ignored){}
+            }catch(Throwable t){
+                changingTrack=false;
+            }
         }
         updateButtons();
     }
@@ -68,64 +130,30 @@ public class MusicPlayer{
             refreshDialog();
             return;
         }
-
         dialog=new Dialog("BNmusic 音乐播放器");
-
         dialog.cont.clear();
         dialog.cont.defaults().growX();
-
         dialog.cont.add("音乐播放器").fontScale(1.2f).pad(10f).row();
-
         dialog.cont.add("当前音乐：").padBottom(4f).row();
         dialog.cont.add(names[currentIndex]).padBottom(10f).row();
-
         dialog.cont.table(t->{
             t.defaults().size(105f,55f).pad(4f);
-
             t.button("上一曲",Styles.flatt,MusicPlayer::prevTrack);
-
-            playButton=t.button(
-                    isPlaying()?"暂停":"播放",
-                    Styles.flatt,
-                    MusicPlayer::togglePlay
-            ).get();
-
+            playButton=t.button(isPlaying()?"暂停":"播放",Styles.flatt,MusicPlayer::togglePlay).get();
             t.button("下一曲",Styles.flatt,MusicPlayer::nextTrack);
         }).row();
-
         dialog.cont.table(t->{
             t.defaults().size(105f,50f).pad(4f);
-
             t.button("停止",Styles.flatt,MusicPlayer::stop);
-
-            shuffleButton=t.button(
-                    shuffle?"随机：开":"随机：关",
-                    Styles.flatt,
-                    MusicPlayer::toggleShuffle
-            ).get();
-
-            loopButton=t.button(
-                    loopSingle?"单曲：开":"单曲：关",
-                    Styles.flatt,
-                    MusicPlayer::toggleLoop
-            ).get();
+            shuffleButton=t.button(shuffle?"随机：开":"随机：关",Styles.flatt,MusicPlayer::toggleShuffle).get();
+            loopButton=t.button(loopSingle?"单曲：开":"单曲：关",Styles.flatt,MusicPlayer::toggleLoop).get();
         }).padBottom(10f).row();
-
         dialog.cont.add("音乐列表").pad(5f).row();
-
         listTable=new Table();
         listTable.left();
-
-        dialog.cont.pane(listTable)
-                .width(380f)
-                .height(350f)
-                .pad(5f)
-                .row();
-
+        dialog.cont.pane(listTable).width(380f).height(350f).pad(5f).row();
         refreshList();
-
         dialog.addCloseButton();
-
         dialog.hidden(()->{
             dialog=null;
             playButton=null;
@@ -133,12 +161,11 @@ public class MusicPlayer{
             loopButton=null;
             listTable=null;
         });
-
         dialog.show();
     }
     private static void refreshDialog(){
         if(dialog==null)return;
-        if(dialog.cont==null)return;
+        if(dialog.parent==null)return;
         updateButtons();
         refreshList();
     }
@@ -148,15 +175,19 @@ public class MusicPlayer{
             listTable.clearChildren();
             for(int i=0;i<files.length;i++){
                 final int index=i;
-                listTable.button(
-                        index==currentIndex?"▶ "+names[index]:names[index],
-                        Styles.flatt,
-                        ()->{
-                            currentIndex=index;
+                listTable.button(index==currentIndex?"▶ "+names[index]:names[index],Styles.flatt,()->{
+                    if(index==currentIndex){
+                        if(currentMusic==null){
                             loadTrack();
-                            refreshList();
+                        }else{
+                            togglePlay();
                         }
-                ).growX().height(42f).pad(2f).row();
+                        return;
+                    }
+                    currentIndex=index;
+                    loadTrack();
+                    refreshList();
+                }).growX().height(42f).pad(2f).row();
             }
             listTable.pack();
         }catch(Throwable t){
@@ -189,47 +220,29 @@ public class MusicPlayer{
             return false;
         }
     }
-    private static Music getMusic(String name){
-        try{
-            Music music=Core.assets.getOrNull("music/"+name+".ogg",Music.class);
-            if(music!=null)return music;
-        }catch(Throwable ignored){}
-        try{
-            Music music=Core.assets.getOrNull("music/"+name+".mp3",Music.class);
-            if(music!=null)return music;
-        }catch(Throwable ignored){}
-        try{
-            return Vars.tree.loadMusic(name);
-        }catch(Throwable t){
-            Log.err("[MusicPlayer] 无法加载音乐: "+name);
-            Log.err(t);
-            return null;
-        }
-    }
     private static void loadTrack(){
-        stop();
         if(files.length==0)return;
-        String file=files[currentIndex];
-        try{
-            currentMusic=getMusic(file);
-        }catch(Throwable t){
-            Log.err("[MusicPlayer] 加载音乐失败: "+file);
-            Log.err(t);
-            currentMusic=null;
+        if(!musicLoaded){
+            Log.info("[MusicPlayer] 音乐还没有加载完成");
             return;
         }
-        if(currentMusic==null){
-            Log.err("[MusicPlayer] 音乐不存在: "+file);
+        if(currentIndex<0||currentIndex>=musicList.length)currentIndex=0;
+        stop();
+        Music music=musicList[currentIndex];
+        if(music==null){
+            Log.err("[MusicPlayer] 音乐不存在: "+files[currentIndex]);
             return;
         }
+        currentMusic=music;
         try{
             currentMusic.setVolume(volume);
             currentMusic.setLooping(loopSingle);
             currentMusic.play();
-            Log.info("[MusicPlayer] 播放: "+names[currentIndex]);
+            Log.info("[MusicPlayer] 播放: "+names[currentIndex]+" ("+files[currentIndex]+")");
             updateButtons();
+            refreshList();
         }catch(Throwable t){
-            Log.err("[MusicPlayer] 播放失败: "+file);
+            Log.err("[MusicPlayer] 播放失败: "+files[currentIndex]);
             Log.err(t);
             currentMusic=null;
         }
