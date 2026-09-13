@@ -27,8 +27,7 @@ public class BNmod extends Mod{
     private static float startButtonX;
     private static float startButtonY;
     private static final float dragThreshold=12f;
-    public BNmod(){
-    }
+    public BNmod(){}
     public static String name(String add){
         return ModName+"-"+add;
     }
@@ -36,7 +35,7 @@ public class BNmod extends Mod{
     public void loadContent(){
         mod=Vars.mods.getMod(this.getClass());
         MusicPlayer.load();
-        Events.on(ClientLoadEvent.class,e->addButton());
+        Events.on(ClientLoadEvent.class,e->Core.app.post(BNmod::addButton));
         Events.run(Trigger.update,BNmod::updateButton);
     }
     private static void addButton(){
@@ -44,9 +43,11 @@ public class BNmod extends Mod{
         if(buttonTable!=null&&buttonTable.parent!=null)return;
         buttonTable=new Table();
         buttonTable.setTransform(true);
+        buttonTable.setSize(120f,55f);
         buttonTable.setPosition(buttonX,buttonY);
         musicButton=new TextButton("BNmusic",Styles.flatt);
         musicButton.setSize(120f,55f);
+        musicButton.clicked(MusicPlayer::toggleDialog);
         buttonTable.add(musicButton).size(120f,55f);
         Core.scene.add(buttonTable);
     }
@@ -87,14 +88,9 @@ public class BNmod extends Mod{
         }
         if(!down&&pressed){
             pressed=false;
-            if(!dragging){
-                if(MusicPlayer.isDialogOpen()){
-                    MusicPlayer.hideDialog();
-                }else{
-                    MusicPlayer.showDialog();
-                }
+            if(dragging){
+                dragging=false;
             }
-            dragging=false;
         }
     }
 }

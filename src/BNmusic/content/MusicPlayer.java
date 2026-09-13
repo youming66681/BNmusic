@@ -124,6 +124,13 @@ public class MusicPlayer{
         }
         updateButtons();
     }
+    public static void toggleDialog(){
+        if(isDialogOpen()){
+            hideDialog();
+        }else{
+            showDialog();
+        }
+    }
     public static boolean isDialogOpen(){
         return dialog!=null&&dialog.parent!=null;
     }
