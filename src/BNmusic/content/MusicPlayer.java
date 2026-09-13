@@ -14,6 +14,9 @@ import mindustry.game.EventType.Trigger;
 import mindustry.game.EventType.WorldLoadEvent;
 import mindustry.ui.Styles;
 import mindustry.ui.dialogs.BaseDialog;
+import arc.input.InputEvent;
+import arc.input.InputListener;
+import arc.math.Mathf;
 
 public class MusicPlayer{
     private static final String[] files={
@@ -54,11 +57,50 @@ public class MusicPlayer{
         if(Vars.ui==null||Vars.ui.hudGroup==null)return;
         try{
             hudTable=new Table();
-            hudTable.top().right();
-            hudTable.margin(8f);
+            hudTable.setFillParent(true);
+            hudTable.left().bottom();
+            hudTable.margin(15f);
             TextButton button=new TextButton("♫ 音乐",Styles.defaultt);
             button.setSize(120f,50f);
-            button.clicked(MusicPlayer::openPlayerUI);
+            final float[] downX={0f};
+            final float[] downY={0f};
+            final float[] startX={0f};
+            final float[] startY={0f};
+            final boolean[] moved={false};
+            button.addListener(new InputListener(){
+                @Override
+                public boolean touchDown(InputEvent event,float x,float y,int pointer,int buttonCode){
+                    if(pointer>=0){
+                        downX[0]=x;
+                        downY[0]=y;
+                        startX[0]=button.getX();
+                        startY[0]=button.getY();
+                        moved[0]=false;
+                        return true;
+                    }
+                    return false;
+                }
+                @Override
+                public void touchDragged(InputEvent event,float x,float y,int pointer){
+                    if(pointer<0)return;
+                    float dx=x-downX[0];
+                    float dy=y-downY[0];
+                    if(Math.abs(dx)>8f||Math.abs(dy)>8f)moved[0]=true;
+                    if(!moved[0])return;
+                    float nx=startX[0]+dx;
+                    float ny=startY[0]+dy;
+                    nx=Mathf.clamp(nx,0f,Core.graphics.getWidth()-button.getWidth());
+                    ny=Mathf.clamp(ny,0f,Core.graphics.getHeight()-button.getHeight());
+                    button.setPosition(nx,ny);
+                }
+                @Override
+                public void touchUp(InputEvent event,float x,float y,int pointer,int buttonCode){
+                    if(pointer<0)return;
+                    if(!moved[0]){
+                        openPlayerUI();
+                    }
+                }
+            });
             hudTable.add(button).size(120f,50f);
             Vars.ui.hudGroup.addChild(hudTable);
             hudReady=true;
