@@ -174,7 +174,6 @@ public class MusicPlayer{
             return;
         }
         playerDialog=new mindustry.ui.dialogs.BaseDialog("音乐播放器");
-        playerDialog.closeOnBack(true);
         Table cont=playerDialog.cont;
         cont.pane(pane->{
             pane.table(t->{
