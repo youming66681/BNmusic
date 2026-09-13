@@ -3,8 +3,10 @@ package BNmusic.content;
 import arc.Core;
 import arc.Events;
 import arc.audio.Music;
+import arc.scene.ui.Dialog;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
+import arc.struct.Seq;
 import arc.util.Log;
 import mindustry.Vars;
 import mindustry.game.EventType.ClientLoadEvent;
@@ -31,30 +33,21 @@ public class MusicPlayer{
     private static Music currentMusic;
     private static boolean shuffle=false;
     private static boolean loopSingle=false;
-    private static Table musicTable;
-    private static Table listTable;
+    private static Dialog dialog;
     private static TextButton playButton;
     private static TextButton shuffleButton;
     private static TextButton loopButton;
-    private static boolean injected=false;
+    private static Table listTable;
     public static void load(){
         Events.on(ClientLoadEvent.class,e->{
-            injected=false;
-            injectIntoSettings();
+            Log.info("[MusicPlayer] 音乐播放器已加载");
+            Log.info("[MusicPlayer] 共 "+files.length+" 首音乐");
         });
         Events.on(GameOverEvent.class,e->stop());
         Events.on(WorldLoadEvent.class,e->stop());
         Events.run(Trigger.update,MusicPlayer::update);
-        Log.info("[MusicPlayer] 音乐播放器已加载");
-        Log.info("[MusicPlayer] 共 "+files.length+" 首音乐");
     }
     private static void update(){
-        if(Vars.ui!=null&&Vars.ui.settings!=null&&Vars.ui.settings.sound!=null){
-            if(!injected||musicTable==null||musicTable.parent==null){
-                injected=false;
-                injectIntoSettings();
-            }
-        }
         if(currentMusic!=null){
             try{
                 if(!loopSingle){
@@ -68,45 +61,44 @@ public class MusicPlayer{
         }
         updateButtons();
     }
-    private static void injectIntoSettings(){
-        if(injected)return;
-        if(Vars.ui==null)return;
-        if(Vars.ui.settings==null)return;
-        if(Vars.ui.settings.sound==null)return;
-        try{
-            musicTable=new Table();
-            musicTable.left();
-            musicTable.defaults().left();
-            musicTable.add("音乐播放器").fontScale(1.2f).padTop(20f).padBottom(8f).row();
-            musicTable.add("当前音乐：").padBottom(3f).row();
-            musicTable.add(names[currentIndex]).padBottom(8f).row();
-            musicTable.table(t->{
-                t.defaults().size(100f,50f).pad(3f);
-                t.button("上一曲",Styles.flatt,MusicPlayer::prevTrack);
-                playButton=t.button("播放",Styles.flatt,MusicPlayer::togglePlay).get();
-                t.button("下一曲",Styles.flatt,MusicPlayer::nextTrack);
-            }).padBottom(5f).row();
-            musicTable.table(t->{
-                t.defaults().size(100f,45f).pad(3f);
-                t.button("停止",Styles.flatt,MusicPlayer::stop);
-                shuffleButton=t.button("随机：关",Styles.flatt,MusicPlayer::toggleShuffle).get();
-                loopButton=t.button("单曲：关",Styles.flatt,MusicPlayer::toggleLoop).get();
-            }).padBottom(8f).row();
-            musicTable.add("音乐列表").padTop(5f).padBottom(5f).row();
-            listTable=new Table();
-            listTable.left();
-            listTable.defaults().growX();
-            musicTable.pane(listTable).width(340f).height(280f).padBottom(10f).row();
-            musicTable.add("提示：音乐文件放在 assets/music/").padBottom(5f).row();
-            refreshList();
-            Vars.ui.settings.sound.add(musicTable).padTop(10f).row();
-            injected=true;
-            Log.info("[MusicPlayer] 已注入原版设置 → 音频");
-        }catch(Throwable t){
-            injected=false;
-            Log.err("[MusicPlayer] 注入原版音频设置失败");
-            Log.err(t);
+    public static void showDialog(){
+        if(Core.scene==null)return;
+        if(dialog!=null){
+            dialog.show();
+            refreshDialog();
+            return;
         }
+        dialog=new Dialog("BNmusic 音乐播放器");
+        dialog.cont.clear();
+        dialog.cont.defaults().growX();
+        dialog.cont.add("音乐播放器").fontScale(1.2f).pad(10f).row();
+        dialog.cont.add("当前音乐：").padBottom(4f).row();
+        dialog.cont.add(names[currentIndex]).padBottom(10f).row();
+        dialog.cont.table(t->{
+            t.defaults().size(105f,55f).pad(4f);
+            t.button("上一曲",Styles.flatt,MusicPlayer::prevTrack);
+            playButton=t.button(isPlaying()?"暂停":"播放",Styles.flatt,MusicPlayer::togglePlay).get();
+            t.button("下一曲",Styles.flatt,MusicPlayer::nextTrack);
+        }).row();
+        dialog.cont.table(t->{
+            t.defaults().size(105f,50f).pad(4f);
+            t.button("停止",Styles.flatt,MusicPlayer::stop);
+            shuffleButton=t.button(shuffle?"随机：开":"随机：关",Styles.flatt,MusicPlayer::toggleShuffle).get();
+            loopButton=t.button(loopSingle?"单曲：开":"单曲：关",Styles.flatt,MusicPlayer::toggleLoop).get();
+        }).padBottom(10f).row();
+        dialog.cont.add("音乐列表").pad(5f).row();
+        listTable=new Table();
+        listTable.left();
+        dialog.cont.pane(listTable).width(380f).height(350f).pad(5f).row();
+        refreshList();
+        dialog.addCloseButton();
+        dialog.show();
+    }
+    private static void refreshDialog(){
+        if(dialog==null)return;
+        if(dialog.cont==null)return;
+        updateButtons();
+        refreshList();
     }
     private static void refreshList(){
         if(listTable==null)return;
@@ -114,11 +106,15 @@ public class MusicPlayer{
             listTable.clearChildren();
             for(int i=0;i<files.length;i++){
                 final int index=i;
-                listTable.button(index==currentIndex?"▶ "+names[index]:names[index],Styles.flatt,()->{
-                    currentIndex=index;
-                    loadTrack();
-                    refreshList();
-                }).growX().height(42f).pad(2f).row();
+                listTable.button(
+                        index==currentIndex?"▶ "+names[index]:names[index],
+                        Styles.flatt,
+                        ()->{
+                            currentIndex=index;
+                            loadTrack();
+                            refreshList();
+                        }
+                ).growX().height(42f).pad(2f).row();
             }
             listTable.pack();
         }catch(Throwable t){
