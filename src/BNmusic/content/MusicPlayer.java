@@ -14,8 +14,8 @@ import mindustry.game.EventType.Trigger;
 import mindustry.game.EventType.WorldLoadEvent;
 import mindustry.ui.Styles;
 import mindustry.ui.dialogs.BaseDialog;
-import arc.input.InputEvent;
-import arc.input.InputListener;
+import arc.scene.event.InputEvent;
+import arc.scene.event.InputListener;
 import arc.math.Mathf;
 
 public class MusicPlayer{
@@ -56,12 +56,9 @@ public class MusicPlayer{
         if(hudReady)return;
         if(Vars.ui==null||Vars.ui.hudGroup==null)return;
         try{
-            hudTable=new Table();
-            hudTable.setFillParent(true);
-            hudTable.left().bottom();
-            hudTable.margin(15f);
             TextButton button=new TextButton("♫ 音乐",Styles.defaultt);
             button.setSize(120f,50f);
+            button.setPosition(15f,15f);
             final float[] downX={0f};
             final float[] downY={0f};
             final float[] startX={0f};
@@ -70,39 +67,36 @@ public class MusicPlayer{
             button.addListener(new InputListener(){
                 @Override
                 public boolean touchDown(InputEvent event,float x,float y,int pointer,int buttonCode){
-                    if(pointer>=0){
-                        downX[0]=x;
-                        downY[0]=y;
-                        startX[0]=button.getX();
-                        startY[0]=button.getY();
-                        moved[0]=false;
-                        return true;
-                    }
-                    return false;
+                    if(pointer!=0)return false;
+                    downX[0]=x;
+                    downY[0]=y;
+                    startX[0]=button.x;
+                    startY[0]=button.y;
+                    moved[0]=false;
+                    return true;
                 }
                 @Override
                 public void touchDragged(InputEvent event,float x,float y,int pointer){
-                    if(pointer<0)return;
+                    if(pointer!=0)return;
                     float dx=x-downX[0];
                     float dy=y-downY[0];
                     if(Math.abs(dx)>8f||Math.abs(dy)>8f)moved[0]=true;
                     if(!moved[0])return;
                     float nx=startX[0]+dx;
                     float ny=startY[0]+dy;
-                    nx=Mathf.clamp(nx,0f,Core.graphics.getWidth()-button.getWidth());
-                    ny=Mathf.clamp(ny,0f,Core.graphics.getHeight()-button.getHeight());
+                    nx=Mathf.clamp(nx,0f,Vars.ui.hudGroup.getWidth()-button.getWidth());
+                    ny=Mathf.clamp(ny,0f,Vars.ui.hudGroup.getHeight()-button.getHeight());
                     button.setPosition(nx,ny);
                 }
                 @Override
                 public void touchUp(InputEvent event,float x,float y,int pointer,int buttonCode){
-                    if(pointer<0)return;
+                    if(pointer!=0)return;
                     if(!moved[0]){
                         openPlayerUI();
                     }
                 }
             });
-            hudTable.add(button).size(120f,50f);
-            Vars.ui.hudGroup.addChild(hudTable);
+            Vars.ui.hudGroup.addChild(button);
             hudReady=true;
             Log.info("[MusicPlayer] HUD音乐按钮创建成功");
         }catch(Throwable t){
