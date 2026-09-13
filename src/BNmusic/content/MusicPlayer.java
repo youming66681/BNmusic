@@ -4,6 +4,7 @@ import arc.Core;
 import arc.Events;
 import arc.audio.Music;
 import arc.scene.ui.Dialog;
+import arc.scene.ui.Label;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
 import arc.util.Log;
@@ -35,7 +36,9 @@ public class MusicPlayer{
     private static boolean shuffle=false;
     private static boolean loopSingle=false;
     private static boolean changingTrack=false;
+    private static boolean vanillaMusicMuted=false;
     private static Dialog dialog;
+    private static Label currentMusicLabel;
     private static TextButton playButton;
     private static TextButton shuffleButton;
     private static TextButton loopButton;
@@ -46,8 +49,12 @@ public class MusicPlayer{
             Log.info("[MusicPlayer] 共 "+files.length+" 首音乐");
             Core.app.post(MusicPlayer::loadAllMusic);
         });
-        Events.on(GameOverEvent.class,e->stop());
-        Events.on(WorldLoadEvent.class,e->stop());
+        Events.on(GameOverEvent.class,e->{
+            stop();
+        });
+        Events.on(WorldLoadEvent.class,e->{
+            stop();
+        });
         Events.run(Trigger.update,MusicPlayer::update);
     }
     private static void loadAllMusic(){
@@ -83,7 +90,7 @@ public class MusicPlayer{
                 }else{
                     allLoaded=false;
                 }
-            }catch(Throwable t){
+            }catch(Throwable ignored){
                 allLoaded=false;
             }
         }
@@ -133,8 +140,8 @@ public class MusicPlayer{
         dialog.cont.clear();
         dialog.cont.defaults().growX();
         dialog.cont.add("音乐播放器").fontScale(1.2f).pad(10f).row();
-        dialog.cont.add("当前音乐：").padBottom(4f).row();
-        dialog.cont.add(names[currentIndex]).padBottom(10f).row();
+        currentMusicLabel=new Label("");
+        dialog.cont.add(currentMusicLabel).padBottom(10f).row();
         dialog.cont.table(t->{
             t.defaults().size(105f,55f).pad(4f);
             t.button("上一曲",Styles.flatt,MusicPlayer::prevTrack);
@@ -151,20 +158,21 @@ public class MusicPlayer{
         listTable=new Table();
         listTable.left();
         dialog.cont.pane(listTable).width(380f).height(350f).pad(5f).row();
+        dialog.cont.button("关闭",Styles.flatt,()->{
+            if(dialog!=null){
+                dialog.hide();
+            }
+        }).size(160f,55f).pad(8f).row();
+        refreshDialog();
         refreshList();
-        dialog.addCloseButton();
-        dialog.hidden(()->{
-            dialog=null;
-            playButton=null;
-            shuffleButton=null;
-            loopButton=null;
-            listTable=null;
-        });
         dialog.show();
     }
     private static void refreshDialog(){
         if(dialog==null)return;
         if(dialog.parent==null)return;
+        if(currentMusicLabel!=null){
+            currentMusicLabel.setText("当前音乐："+names[currentIndex]);
+        }
         updateButtons();
         refreshList();
     }
@@ -181,11 +189,12 @@ public class MusicPlayer{
                         }else{
                             togglePlay();
                         }
+                        refreshDialog();
                         return;
                     }
                     currentIndex=index;
                     loadTrack();
-                    refreshList();
+                    refreshDialog();
                 }).growX().height(42f).pad(2f).row();
             }
             listTable.pack();
@@ -210,6 +219,11 @@ public class MusicPlayer{
                 loopButton.setText(loopSingle?"单曲：开":"单曲：关");
             }catch(Throwable ignored){}
         }
+        if(currentMusicLabel!=null){
+            try{
+                currentMusicLabel.setText("当前音乐："+names[currentIndex]);
+            }catch(Throwable ignored){}
+        }
     }
     private static boolean isPlaying(){
         if(currentMusic==null)return false;
@@ -217,6 +231,30 @@ public class MusicPlayer{
             return currentMusic.isPlaying();
         }catch(Throwable ignored){
             return false;
+        }
+    }
+    private static void muteVanillaMusic(){
+        try{
+            if(Core.music!=null){
+                Core.music.stop();
+                Core.music.setVolume(0f);
+                vanillaMusicMuted=true;
+                Log.info("[MusicPlayer] 原版音乐已关闭");
+            }
+        }catch(Throwable t){
+            Log.err("[MusicPlayer] 关闭原版音乐失败");
+            Log.err(t);
+        }
+    }
+    private static void restoreVanillaMusic(){
+        try{
+            if(Core.music!=null){
+                Core.music.setVolume(1f);
+                vanillaMusicMuted=false;
+                Log.info("[MusicPlayer] 原版音乐已恢复");
+            }
+        }catch(Throwable t){
+            Log.err("[MusicPlayer] 恢复原版音乐失败");
         }
     }
     private static void loadTrack(){
@@ -228,10 +266,19 @@ public class MusicPlayer{
         if(currentIndex<0||currentIndex>=musicList.length){
             currentIndex=0;
         }
-        stop();
+        muteVanillaMusic();
+        Music oldMusic=currentMusic;
+        if(oldMusic!=null){
+            try{
+                oldMusic.stop();
+            }catch(Throwable ignored){}
+        }
+        currentMusic=null;
         Music music=musicList[currentIndex];
         if(music==null){
             Log.err("[MusicPlayer] 音乐不存在: "+files[currentIndex]);
+            restoreVanillaMusic();
+            refreshDialog();
             return;
         }
         currentMusic=music;
@@ -240,13 +287,13 @@ public class MusicPlayer{
             currentMusic.setLooping(loopSingle);
             currentMusic.play();
             Log.info("[MusicPlayer] 播放: "+names[currentIndex]+" ("+files[currentIndex]+")");
-            updateButtons();
-            refreshList();
         }catch(Throwable t){
             Log.err("[MusicPlayer] 播放失败: "+files[currentIndex]);
             Log.err(t);
             currentMusic=null;
+            restoreVanillaMusic();
         }
+        refreshDialog();
     }
     private static void togglePlay(){
         if(currentMusic==null){
@@ -257,6 +304,7 @@ public class MusicPlayer{
             if(currentMusic.isPlaying()){
                 currentMusic.pause(true);
             }else{
+                muteVanillaMusic();
                 currentMusic.play();
             }
         }catch(Throwable t){
@@ -273,7 +321,6 @@ public class MusicPlayer{
             currentIndex=(currentIndex-1+files.length)%files.length;
         }
         loadTrack();
-        refreshList();
     }
     private static void nextTrack(){
         if(files.length==0)return;
@@ -283,7 +330,6 @@ public class MusicPlayer{
             currentIndex=(currentIndex+1)%files.length;
         }
         loadTrack();
-        refreshList();
     }
     private static void randomTrack(){
         if(files.length<=1){
@@ -302,6 +348,8 @@ public class MusicPlayer{
                 currentMusic.stop();
             }catch(Throwable ignored){}
         }
+        currentMusic=null;
+        restoreVanillaMusic();
         updateButtons();
     }
     private static void toggleShuffle(){
