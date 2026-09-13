@@ -12,7 +12,9 @@ import mindustry.gen.Icon;
 import mindustry.mod.Mod;
 import mindustry.mod.Mods;
 import mindustry.ui.Styles;
-import BNmusic.content.MapBuildingClipboard;
+
+import BNmusic.content.MusicPlayer;
+
 public class BNmod extends Mod{
     public static Mods.LoadedMod ML;
     public static final String ModName = "BNmod";
