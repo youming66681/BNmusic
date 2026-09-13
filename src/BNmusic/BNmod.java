@@ -9,6 +9,7 @@ import mindustry.Vars;
 import mindustry.mod.Mod;
 import mindustry.mod.Mods;
 import arc.audio.Sound;
+import mindustry.Vars;
 
 public class BNmod extends Mod {
     public static Mods.LoadedMod ML;
@@ -22,6 +23,6 @@ public class BNmod extends Mod {
     public void loadContent() {
         mod = Vars.mods.getMod(this.getClass());
 
-        maxSchematicSize = 2048;
+        Vars.maxSchematicSize = 2048;
     }
 }
