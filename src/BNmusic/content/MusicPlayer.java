@@ -35,13 +35,9 @@ public class MusicPlayer{
     private static TextButton playButton;
     private static TextButton shuffleButton;
     private static TextButton loopButton;
-    private static boolean loaded=false;
     private static boolean injected=false;
-    private static Label currentMusicLabel;
     public static void load(){
-        Events.on(ClientLoadEvent.class,e->{
-            injectIntoSettings();
-        });
+        Events.on(ClientLoadEvent.class,e->injectIntoSettings());
         Events.on(GameOverEvent.class,e->stop());
         Events.on(WorldLoadEvent.class,e->stop());
         Events.run(Trigger.update,MusicPlayer::update);
@@ -52,16 +48,17 @@ public class MusicPlayer{
         if(!injected){
             injectIntoSettings();
         }
-        if(currentMusic==null)return;
-        try{
-            if(!loopSingle){
-                float length=currentMusic.getLength();
-                float position=currentMusic.getPosition();
-                if(length>0f&&position>=length-0.2f){
-                    nextTrack();
+        if(currentMusic!=null){
+            try{
+                if(!loopSingle){
+                    float length=currentMusic.getLength();
+                    float position=currentMusic.getPosition();
+                    if(length>0f&&position>=length-0.2f){
+                        nextTrack();
+                    }
                 }
-            }
-        }catch(Throwable ignored){}
+            }catch(Throwable ignored){}
+        }
         updateButtons();
     }
     private static void injectIntoSettings(){
@@ -73,10 +70,9 @@ public class MusicPlayer{
             musicTable=new Table();
             musicTable.left();
             musicTable.defaults().left();
-            currentMusicLabel=musicTable.add(names[currentIndex]).padBottom(8f).get();
-            currentMusicLabel.row();
+            musicTable.add("音乐播放器").fontScale(1.2f).padTop(20f).padBottom(8f).row();
             musicTable.add("当前音乐：").padBottom(3f).row();
-            musicTable.add(() -> names[currentIndex]).padBottom(8f).row();
+            musicTable.add(names[currentIndex]).padBottom(8f).row();
             musicTable.table(t->{
                 t.defaults().size(100f,50f).pad(3f);
                 t.button("上一曲",MusicPlayer::prevTrack);
@@ -96,7 +92,7 @@ public class MusicPlayer{
                     list.button(index==currentIndex?"▶ "+names[index]:names[index],Styles.flatt,()->{
                         currentIndex=index;
                         loadTrack();
-                        rebuildMusicList();
+                        refreshList();
                     }).growX().height(42f).pad(2f).row();
                 }
             }).width(340f).height(280f).padBottom(10f).row();
@@ -109,14 +105,13 @@ public class MusicPlayer{
             Log.err(t);
         }
     }
-    private static void rebuildMusicList(){
+    private static void refreshList(){
         if(musicTable==null)return;
         try{
-            currentMusicLabel=musicTable.add(names[currentIndex]).padBottom(8f).get();
-            musicTable.row();
+            musicTable.clearChildren();
             musicTable.add("音乐播放器").fontScale(1.2f).padTop(20f).padBottom(8f).row();
             musicTable.add("当前音乐：").padBottom(3f).row();
-            musicTable.add(() -> names[currentIndex]).padBottom(8f).row();
+            musicTable.add(names[currentIndex]).padBottom(8f).row();
             musicTable.table(t->{
                 t.defaults().size(100f,50f).pad(3f);
                 t.button("上一曲",MusicPlayer::prevTrack);
@@ -136,11 +131,12 @@ public class MusicPlayer{
                     list.button(index==currentIndex?"▶ "+names[index]:names[index],Styles.flatt,()->{
                         currentIndex=index;
                         loadTrack();
-                        rebuildMusicList();
+                        refreshList();
                     }).growX().height(42f).pad(2f).row();
                 }
             }).width(340f).height(280f).padBottom(10f).row();
             musicTable.add("提示：音乐文件放在 assets/music/").padBottom(5f).row();
+            musicTable.pack();
         }catch(Throwable t){
             Log.err("[MusicPlayer] 刷新音乐列表失败");
             Log.err(t);
@@ -208,7 +204,6 @@ public class MusicPlayer{
             currentMusic.setVolume(volume);
             currentMusic.setLooping(loopSingle);
             currentMusic.play();
-            loaded=true;
             Log.info("[MusicPlayer] 播放: "+names[currentIndex]);
             updateButtons();
         }catch(Throwable t){
@@ -242,7 +237,7 @@ public class MusicPlayer{
             currentIndex=(currentIndex-1+files.length)%files.length;
         }
         loadTrack();
-        rebuildMusicList();
+        refreshList();
     }
     private static void nextTrack(){
         if(files.length==0)return;
@@ -252,7 +247,7 @@ public class MusicPlayer{
             currentIndex=(currentIndex+1)%files.length;
         }
         loadTrack();
-        rebuildMusicList();
+        refreshList();
     }
     private static void randomTrack(){
         if(files.length<=1){
