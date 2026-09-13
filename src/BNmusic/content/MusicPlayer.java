@@ -8,6 +8,7 @@ import arc.scene.ui.Label;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
 import arc.util.Log;
+import mindustry.content.Musics;
 import mindustry.game.EventType.ClientLoadEvent;
 import mindustry.game.EventType.GameOverEvent;
 import mindustry.game.EventType.Trigger;
@@ -36,7 +37,6 @@ public class MusicPlayer{
     private static boolean shuffle=false;
     private static boolean loopSingle=false;
     private static boolean changingTrack=false;
-    private static boolean vanillaMusicMuted=false;
     private static Dialog dialog;
     private static Label currentMusicLabel;
     private static TextButton playButton;
@@ -49,12 +49,8 @@ public class MusicPlayer{
             Log.info("[MusicPlayer] 共 "+files.length+" 首音乐");
             Core.app.post(MusicPlayer::loadAllMusic);
         });
-        Events.on(GameOverEvent.class,e->{
-            stop();
-        });
-        Events.on(WorldLoadEvent.class,e->{
-            stop();
-        });
+        Events.on(GameOverEvent.class,e->stop());
+        Events.on(WorldLoadEvent.class,e->stop());
         Events.run(Trigger.update,MusicPlayer::update);
     }
     private static void loadAllMusic(){
@@ -112,6 +108,7 @@ public class MusicPlayer{
         if(loadingMusic&&!musicLoaded){
             waitForMusic();
         }
+        muteVanillaMusic();
         if(currentMusic!=null&&!changingTrack){
             try{
                 if(!loopSingle){
@@ -128,6 +125,14 @@ public class MusicPlayer{
             }
         }
         updateButtons();
+    }
+    public static boolean isDialogOpen(){
+        return dialog!=null&&dialog.parent!=null;
+    }
+    public static void hideDialog(){
+        if(dialog!=null&&dialog.parent!=null){
+            dialog.hide();
+        }
     }
     public static void showDialog(){
         if(Core.scene==null)return;
@@ -158,11 +163,7 @@ public class MusicPlayer{
         listTable=new Table();
         listTable.left();
         dialog.cont.pane(listTable).width(380f).height(350f).pad(5f).row();
-        dialog.cont.button("关闭",Styles.flatt,()->{
-            if(dialog!=null){
-                dialog.hide();
-            }
-        }).size(160f,55f).pad(8f).row();
+        dialog.cont.button("关闭",Styles.flatt,MusicPlayer::hideDialog).size(160f,55f).pad(8f).row();
         refreshDialog();
         refreshList();
         dialog.show();
@@ -235,26 +236,48 @@ public class MusicPlayer{
     }
     private static void muteVanillaMusic(){
         try{
-            if(Core.music!=null){
-                Core.music.stop();
-                Core.music.setVolume(0f);
-                vanillaMusicMuted=true;
-                Log.info("[MusicPlayer] 原版音乐已关闭");
+            Music[] vanilla={
+                    Musics.game1,
+                    Musics.game2,
+                    Musics.game3,
+                    Musics.game4,
+                    Musics.game5,
+                    Musics.game6,
+                    Musics.game7,
+                    Musics.game8,
+                    Musics.game9,
+                    Musics.game10,
+                    Musics.game11,
+                    Musics.game12,
+                    Musics.game13,
+                    Musics.game14,
+                    Musics.game15,
+                    Musics.game16,
+                    Musics.game17,
+                    Musics.game18,
+                    Musics.game19,
+                    Musics.game20,
+                    Musics.game21,
+                    Musics.game22,
+                    Musics.game23,
+                    Musics.game24,
+                    Musics.game25,
+                    Musics.game26,
+                    Musics.game27,
+                    Musics.boss1,
+                    Musics.boss2,
+                    Musics.editor
+            };
+            for(Music music:vanilla){
+                if(music!=null){
+                    try{
+                        music.stop();
+                    }catch(Throwable ignored){}
+                }
             }
         }catch(Throwable t){
-            Log.err("[MusicPlayer] 关闭原版音乐失败");
+            Log.err("[MusicPlayer] 停止原版音乐失败");
             Log.err(t);
-        }
-    }
-    private static void restoreVanillaMusic(){
-        try{
-            if(Core.music!=null){
-                Core.music.setVolume(1f);
-                vanillaMusicMuted=false;
-                Log.info("[MusicPlayer] 原版音乐已恢复");
-            }
-        }catch(Throwable t){
-            Log.err("[MusicPlayer] 恢复原版音乐失败");
         }
     }
     private static void loadTrack(){
@@ -277,7 +300,6 @@ public class MusicPlayer{
         Music music=musicList[currentIndex];
         if(music==null){
             Log.err("[MusicPlayer] 音乐不存在: "+files[currentIndex]);
-            restoreVanillaMusic();
             refreshDialog();
             return;
         }
@@ -291,7 +313,6 @@ public class MusicPlayer{
             Log.err("[MusicPlayer] 播放失败: "+files[currentIndex]);
             Log.err(t);
             currentMusic=null;
-            restoreVanillaMusic();
         }
         refreshDialog();
     }
@@ -349,7 +370,6 @@ public class MusicPlayer{
             }catch(Throwable ignored){}
         }
         currentMusic=null;
-        restoreVanillaMusic();
         updateButtons();
     }
     private static void toggleShuffle(){
