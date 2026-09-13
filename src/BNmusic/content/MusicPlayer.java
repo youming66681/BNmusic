@@ -240,7 +240,7 @@ public class MusicPlayer{
         Table cont=playerDialog.cont;
         cont.pane(pane->{
             pane.table(t->{
-                t.label(()->files.length==0?"没有音乐":names).fontScale(1.3f).padBottom(8f).row();
+                t.label(()->files.length==0?"没有音乐":names[currentIndex]).fontScale(1.3f).padBottom(8f).row();
                 t.label(()->(currentIndex+1)+" / "+files.length).padBottom(10f).row();
                 t.table(volT->{
                     volT.add("音量").padRight(10f);
@@ -283,7 +283,7 @@ public class MusicPlayer{
                 t.pane(listPane->{
                     for(int i=0;i<files.length;i++){
                         final int index=i;
-                        listPane.button(index==currentIndex?"▶ "+names[index]:names,()->{
+                        listPane.button(index==currentIndex?"▶ "+names[index]:names[index],()->{
                             currentIndex=index;
                             loadTrack();
                         }).growX().height(42f).pad(3f).row();
