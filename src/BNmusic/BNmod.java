@@ -27,8 +27,10 @@ public class BNmod extends Mod{
     @Override
     public void loadContent(){
         mod = Vars.mods.getMod(this.getClass());
+
+        MusicPlayer.load();
     }
-    @Override
+    /*@Override
     public void init(){
         Vars.maxSchematicSize = 32768;
         Events.on(ClientLoadEvent.class, event -> {
@@ -72,5 +74,5 @@ public class BNmod extends Mod{
         }catch(Throwable e){
             Log.err("[BNmod] 创建建筑蓝图按钮失败", e);
         }
-    }
+    }*/
 }
