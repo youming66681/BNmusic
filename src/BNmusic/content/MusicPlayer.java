@@ -32,12 +32,16 @@ public class MusicPlayer{
     private static boolean shuffle=false;
     private static boolean loopSingle=false;
     private static Table musicTable;
+    private static Table listTable;
     private static TextButton playButton;
     private static TextButton shuffleButton;
     private static TextButton loopButton;
     private static boolean injected=false;
     public static void load(){
-        Events.on(ClientLoadEvent.class,e->injectIntoSettings());
+        Events.on(ClientLoadEvent.class,e->{
+            injected=false;
+            injectIntoSettings();
+        });
         Events.on(GameOverEvent.class,e->stop());
         Events.on(WorldLoadEvent.class,e->stop());
         Events.run(Trigger.update,MusicPlayer::update);
@@ -45,8 +49,11 @@ public class MusicPlayer{
         Log.info("[MusicPlayer] 共 "+files.length+" 首音乐");
     }
     private static void update(){
-        if(!injected){
-            injectIntoSettings();
+        if(Vars.ui!=null&&Vars.ui.settings!=null&&Vars.ui.settings.sound!=null){
+            if(!injected||musicTable==null||musicTable.parent==null){
+                injected=false;
+                injectIntoSettings();
+            }
         }
         if(currentMusic!=null){
             try{
@@ -75,68 +82,45 @@ public class MusicPlayer{
             musicTable.add(names[currentIndex]).padBottom(8f).row();
             musicTable.table(t->{
                 t.defaults().size(100f,50f).pad(3f);
-                t.button("上一曲",MusicPlayer::prevTrack);
-                playButton=t.button("播放",MusicPlayer::togglePlay).get();
-                t.button("下一曲",MusicPlayer::nextTrack);
+                t.button("上一曲",Styles.flatt,MusicPlayer::prevTrack);
+                playButton=t.button("播放",Styles.flatt,MusicPlayer::togglePlay).get();
+                t.button("下一曲",Styles.flatt,MusicPlayer::nextTrack);
             }).padBottom(5f).row();
             musicTable.table(t->{
                 t.defaults().size(100f,45f).pad(3f);
-                t.button("停止",MusicPlayer::stop);
-                shuffleButton=t.button("随机：关",MusicPlayer::toggleShuffle).get();
-                loopButton=t.button("单曲：关",MusicPlayer::toggleLoop).get();
+                t.button("停止",Styles.flatt,MusicPlayer::stop);
+                shuffleButton=t.button("随机：关",Styles.flatt,MusicPlayer::toggleShuffle).get();
+                loopButton=t.button("单曲：关",Styles.flatt,MusicPlayer::toggleLoop).get();
             }).padBottom(8f).row();
             musicTable.add("音乐列表").padTop(5f).padBottom(5f).row();
-            musicTable.pane(list->{
-                for(int i=0;i<files.length;i++){
-                    final int index=i;
-                    list.button(index==currentIndex?"▶ "+names[index]:names[index],Styles.flatt,()->{
-                        currentIndex=index;
-                        loadTrack();
-                        refreshList();
-                    }).growX().height(42f).pad(2f).row();
-                }
-            }).width(340f).height(280f).padBottom(10f).row();
+            listTable=new Table();
+            listTable.left();
+            listTable.defaults().growX();
+            musicTable.pane(listTable).width(340f).height(280f).padBottom(10f).row();
             musicTable.add("提示：音乐文件放在 assets/music/").padBottom(5f).row();
+            refreshList();
             Vars.ui.settings.sound.add(musicTable).padTop(10f).row();
             injected=true;
             Log.info("[MusicPlayer] 已注入原版设置 → 音频");
         }catch(Throwable t){
+            injected=false;
             Log.err("[MusicPlayer] 注入原版音频设置失败");
             Log.err(t);
         }
     }
     private static void refreshList(){
-        if(musicTable==null)return;
+        if(listTable==null)return;
         try{
-            musicTable.clearChildren();
-            musicTable.add("音乐播放器").fontScale(1.2f).padTop(20f).padBottom(8f).row();
-            musicTable.add("当前音乐：").padBottom(3f).row();
-            musicTable.add(names[currentIndex]).padBottom(8f).row();
-            musicTable.table(t->{
-                t.defaults().size(100f,50f).pad(3f);
-                t.button("上一曲",MusicPlayer::prevTrack);
-                playButton=t.button(isPlaying()?"暂停":"播放",MusicPlayer::togglePlay).get();
-                t.button("下一曲",MusicPlayer::nextTrack);
-            }).padBottom(5f).row();
-            musicTable.table(t->{
-                t.defaults().size(100f,45f).pad(3f);
-                t.button("停止",MusicPlayer::stop);
-                shuffleButton=t.button(shuffle?"随机：开":"随机：关",MusicPlayer::toggleShuffle).get();
-                loopButton=t.button(loopSingle?"单曲：开":"单曲：关",MusicPlayer::toggleLoop).get();
-            }).padBottom(8f).row();
-            musicTable.add("音乐列表").padTop(5f).padBottom(5f).row();
-            musicTable.pane(list->{
-                for(int i=0;i<files.length;i++){
-                    final int index=i;
-                    list.button(index==currentIndex?"▶ "+names[index]:names[index],Styles.flatt,()->{
-                        currentIndex=index;
-                        loadTrack();
-                        refreshList();
-                    }).growX().height(42f).pad(2f).row();
-                }
-            }).width(340f).height(280f).padBottom(10f).row();
-            musicTable.add("提示：音乐文件放在 assets/music/").padBottom(5f).row();
-            musicTable.pack();
+            listTable.clearChildren();
+            for(int i=0;i<files.length;i++){
+                final int index=i;
+                listTable.button(index==currentIndex?"▶ "+names[index]:names[index],Styles.flatt,()->{
+                    currentIndex=index;
+                    loadTrack();
+                    refreshList();
+                }).growX().height(42f).pad(2f).row();
+            }
+            listTable.pack();
         }catch(Throwable t){
             Log.err("[MusicPlayer] 刷新音乐列表失败");
             Log.err(t);
