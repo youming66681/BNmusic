@@ -8,7 +8,6 @@ import arc.scene.ui.Label;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
 import arc.util.Log;
-import mindustry.content.Musics;
 import mindustry.game.EventType.ClientLoadEvent;
 import mindustry.game.EventType.GameOverEvent;
 import mindustry.game.EventType.Trigger;
@@ -108,7 +107,6 @@ public class MusicPlayer{
         if(loadingMusic&&!musicLoaded){
             waitForMusic();
         }
-        muteVanillaMusic();
         if(currentMusic!=null&&!changingTrack){
             try{
                 if(!loopSingle){
@@ -234,52 +232,6 @@ public class MusicPlayer{
             return false;
         }
     }
-    private static void muteVanillaMusic(){
-        try{
-            Music[] vanilla={
-                    Musics.game1,
-                    Musics.game2,
-                    Musics.game3,
-                    Musics.game4,
-                    Musics.game5,
-                    Musics.game6,
-                    Musics.game7,
-                    Musics.game8,
-                    Musics.game9,
-                    Musics.game10,
-                    Musics.game11,
-                    Musics.game12,
-                    Musics.game13,
-                    Musics.game14,
-                    Musics.game15,
-                    Musics.game16,
-                    Musics.game17,
-                    Musics.game18,
-                    Musics.game19,
-                    Musics.game20,
-                    Musics.game21,
-                    Musics.game22,
-                    Musics.game23,
-                    Musics.game24,
-                    Musics.game25,
-                    Musics.game26,
-                    Musics.game27,
-                    Musics.boss1,
-                    Musics.boss2,
-                    Musics.editor
-            };
-            for(Music music:vanilla){
-                if(music!=null){
-                    try{
-                        music.stop();
-                    }catch(Throwable ignored){}
-                }
-            }
-        }catch(Throwable t){
-            Log.err("[MusicPlayer] 停止原版音乐失败");
-            Log.err(t);
-        }
-    }
     private static void loadTrack(){
         if(files.length==0)return;
         if(!musicLoaded){
@@ -289,7 +241,6 @@ public class MusicPlayer{
         if(currentIndex<0||currentIndex>=musicList.length){
             currentIndex=0;
         }
-        muteVanillaMusic();
         Music oldMusic=currentMusic;
         if(oldMusic!=null){
             try{
@@ -325,7 +276,6 @@ public class MusicPlayer{
             if(currentMusic.isPlaying()){
                 currentMusic.pause(true);
             }else{
-                muteVanillaMusic();
                 currentMusic.play();
             }
         }catch(Throwable t){
