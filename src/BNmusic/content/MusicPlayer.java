@@ -86,7 +86,6 @@ public class MusicPlayer{
                     ny=Mathf.clamp(ny,0f,Vars.ui.hudGroup.getHeight()-button.getHeight());
                     button.setPosition(nx,ny);
                 }
-                @Override
                 public void touchUp(InputEvent event,float x,float y,int pointer,int buttonCode){
                     if(pointer!=0)return;
                     if(!moved[0]){
