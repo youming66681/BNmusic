@@ -1,16 +1,17 @@
 package BNmusic;
+
 import arc.Core;
 import arc.Events;
-import arc.scene.InputEvent;
-import arc.scene.event.InputListener;
 import arc.scene.ui.TextButton;
 import arc.scene.ui.layout.Table;
 import mindustry.Vars;
 import mindustry.game.EventType.ClientLoadEvent;
+import mindustry.game.EventType.Trigger;
 import mindustry.mod.Mod;
 import mindustry.mod.Mods;
 import mindustry.ui.Styles;
 import BNmusic.content.MusicPlayer;
+
 public class BNmod extends Mod{
     public static Mods.LoadedMod ML;
     public static final String ModName="BNmod";
@@ -19,13 +20,12 @@ public class BNmod extends Mod{
     private static TextButton musicButton;
     private static float buttonX=100f;
     private static float buttonY=100f;
+    private static boolean dragging=false;
+    private static boolean pressed=false;
     private static float touchStartX;
     private static float touchStartY;
     private static float startButtonX;
     private static float startButtonY;
-    private static boolean dragging=false;
-    private static boolean pressed=false;
-    private static int activePointer=-1;
     private static final float dragThreshold=12f;
     public BNmod(){
     }
@@ -37,6 +37,7 @@ public class BNmod extends Mod{
         mod=Vars.mods.getMod(this.getClass());
         MusicPlayer.load();
         Events.on(ClientLoadEvent.class,e->addButton());
+        Events.run(Trigger.update,BNmod::updateButton);
     }
     private static void addButton(){
         if(Core.scene==null)return;
@@ -47,29 +48,32 @@ public class BNmod extends Mod{
         musicButton=new TextButton("BNmusic",Styles.flatt);
         musicButton.setSize(120f,55f);
         buttonTable.add(musicButton).size(120f,55f);
-        buttonTable.addListener(new InputListener(){
-            @Override
-            public boolean touchDown(InputEvent event,float x,float y,int pointer,int button){
-                if(activePointer!=-1)return false;
-                if(button!=0&&pointer<0)return false;
-                activePointer=pointer;
+        Core.scene.add(buttonTable);
+    }
+    private static void updateButton(){
+        if(buttonTable==null||buttonTable.parent==null)return;
+        float inputX=Core.input.mouseX();
+        float inputY=Core.graphics.getHeight()-Core.input.mouseY();
+        boolean down=Core.input.isTouched();
+        if(down&&!pressed){
+            float localX=inputX-buttonTable.x;
+            float localY=inputY-buttonTable.y;
+            if(localX>=0f&&localX<=buttonTable.getWidth()&&localY>=0f&&localY<=buttonTable.getHeight()){
                 pressed=true;
                 dragging=false;
-                touchStartX=x;
-                touchStartY=y;
+                touchStartX=inputX;
+                touchStartY=inputY;
                 startButtonX=buttonTable.x;
                 startButtonY=buttonTable.y;
-                return true;
             }
-            @Override
-            public void touchDragged(InputEvent event,float x,float y,int pointer){
-                if(pointer!=activePointer)return;
-                float dx=x-touchStartX;
-                float dy=y-touchStartY;
-                if(!dragging){
-                    if(Math.abs(dx)<dragThreshold&&Math.abs(dy)<dragThreshold)return;
-                    dragging=true;
-                }
+        }
+        if(down&&pressed){
+            float dx=inputX-touchStartX;
+            float dy=inputY-touchStartY;
+            if(!dragging&&(Math.abs(dx)>=dragThreshold||Math.abs(dy)>=dragThreshold)){
+                dragging=true;
+            }
+            if(dragging){
                 float nx=startButtonX+dx;
                 float ny=startButtonY+dy;
                 float maxX=Math.max(0f,Core.graphics.getWidth()-buttonTable.getWidth());
@@ -80,17 +84,13 @@ public class BNmod extends Mod{
                 buttonX=nx;
                 buttonY=ny;
             }
-            @Override
-            public void touchUp(InputEvent event,float x,float y,int pointer,int button){
-                if(pointer!=activePointer)return;
-                activePointer=-1;
-                pressed=false;
-                if(!dragging){
-                    MusicPlayer.showDialog();
-                }
-                dragging=false;
+        }
+        if(!down&&pressed){
+            pressed=false;
+            if(!dragging){
+                MusicPlayer.showDialog();
             }
-        });
-        Core.scene.add(buttonTable);
+            dragging=false;
+        }
     }
 }
