@@ -69,9 +69,9 @@ public class MusicPlayer{
                 Log.err(t);
             }
         }
-        Core.app.post(MusicPlayer::waitForMusic);
     }
     private static void waitForMusic(){
+        if(!loadingMusic||musicLoaded)return;
         boolean allLoaded=true;
         for(int i=0;i<files.length;i++){
             String path="music/"+files[i]+".ogg";
@@ -85,13 +85,9 @@ public class MusicPlayer{
                 }
             }catch(Throwable t){
                 allLoaded=false;
-                Log.err("[MusicPlayer] 检查音乐失败: "+path);
             }
         }
-        if(!allLoaded){
-            Core.app.postDelayed(MusicPlayer::waitForMusic,5f);
-            return;
-        }
+        if(!allLoaded)return;
         int loaded=0;
         for(int i=0;i<musicList.length;i++){
             if(musicList[i]!=null){
@@ -106,6 +102,9 @@ public class MusicPlayer{
         Log.info("[MusicPlayer] 音乐加载完成: "+loaded+"/"+files.length);
     }
     private static void update(){
+        if(loadingMusic&&!musicLoaded){
+            waitForMusic();
+        }
         if(currentMusic!=null&&!changingTrack){
             try{
                 if(!loopSingle){
@@ -226,7 +225,9 @@ public class MusicPlayer{
             Log.info("[MusicPlayer] 音乐还没有加载完成");
             return;
         }
-        if(currentIndex<0||currentIndex>=musicList.length)currentIndex=0;
+        if(currentIndex<0||currentIndex>=musicList.length){
+            currentIndex=0;
+        }
         stop();
         Music music=musicList[currentIndex];
         if(music==null){
