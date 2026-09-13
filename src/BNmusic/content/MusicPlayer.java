@@ -63,35 +63,77 @@ public class MusicPlayer{
     }
     public static void showDialog(){
         if(Core.scene==null)return;
-        if(dialog!=null){
-            dialog.show();
+        if(dialog!=null&&dialog.parent!=null){
+            dialog.toFront();
             refreshDialog();
             return;
         }
+
         dialog=new Dialog("BNmusic 音乐播放器");
+
         dialog.cont.clear();
         dialog.cont.defaults().growX();
+
         dialog.cont.add("音乐播放器").fontScale(1.2f).pad(10f).row();
+
         dialog.cont.add("当前音乐：").padBottom(4f).row();
         dialog.cont.add(names[currentIndex]).padBottom(10f).row();
+
         dialog.cont.table(t->{
             t.defaults().size(105f,55f).pad(4f);
+
             t.button("上一曲",Styles.flatt,MusicPlayer::prevTrack);
-            playButton=t.button(isPlaying()?"暂停":"播放",Styles.flatt,MusicPlayer::togglePlay).get();
+
+            playButton=t.button(
+                    isPlaying()?"暂停":"播放",
+                    Styles.flatt,
+                    MusicPlayer::togglePlay
+            ).get();
+
             t.button("下一曲",Styles.flatt,MusicPlayer::nextTrack);
         }).row();
+
         dialog.cont.table(t->{
             t.defaults().size(105f,50f).pad(4f);
+
             t.button("停止",Styles.flatt,MusicPlayer::stop);
-            shuffleButton=t.button(shuffle?"随机：开":"随机：关",Styles.flatt,MusicPlayer::toggleShuffle).get();
-            loopButton=t.button(loopSingle?"单曲：开":"单曲：关",Styles.flatt,MusicPlayer::toggleLoop).get();
+
+            shuffleButton=t.button(
+                    shuffle?"随机：开":"随机：关",
+                    Styles.flatt,
+                    MusicPlayer::toggleShuffle
+            ).get();
+
+            loopButton=t.button(
+                    loopSingle?"单曲：开":"单曲：关",
+                    Styles.flatt,
+                    MusicPlayer::toggleLoop
+            ).get();
         }).padBottom(10f).row();
+
         dialog.cont.add("音乐列表").pad(5f).row();
+
         listTable=new Table();
         listTable.left();
-        dialog.cont.pane(listTable).width(380f).height(350f).pad(5f).row();
+
+        dialog.cont.pane(listTable)
+                .width(380f)
+                .height(350f)
+                .pad(5f)
+                .row();
+
         refreshList();
+
         dialog.addCloseButton();
+
+        dialog.hidden(()->{
+            dialog=null;
+            playButton=null;
+            shuffleButton=null;
+            loopButton=null;
+            listTable=null;
+        });
+
         dialog.show();
     }
     private static void refreshDialog(){
