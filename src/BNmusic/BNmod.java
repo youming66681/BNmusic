@@ -35,10 +35,12 @@ public class BNmod extends Mod{
     public void loadContent(){
         mod=Vars.mods.getMod(this.getClass());
         MusicPlayer.load();
-        Events.on(ClientLoadEvent.class,e->Core.app.post(BNmod::addButton));
+        Events.on(ClientLoadEvent.class,e->{
+            Core.app.post(BNmod::ensureButton);
+        });
         Events.run(Trigger.update,BNmod::updateButton);
     }
-    private static void addButton(){
+    private static void ensureButton(){
         if(Core.scene==null)return;
         if(buttonTable!=null&&buttonTable.parent!=null)return;
         buttonTable=new Table();
@@ -52,7 +54,11 @@ public class BNmod extends Mod{
         Core.scene.add(buttonTable);
     }
     private static void updateButton(){
-        if(buttonTable==null||buttonTable.parent==null)return;
+        if(Core.scene==null)return;
+        if(buttonTable==null||buttonTable.parent==null){
+            ensureButton();
+            if(buttonTable==null||buttonTable.parent==null)return;
+        }
         float inputX=Core.input.mouseX();
         float inputY=Core.graphics.getHeight()-Core.input.mouseY();
         boolean down=Core.input.isTouched();

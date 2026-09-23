@@ -36,6 +36,8 @@ public class MusicPlayer{
     private static boolean shuffle=false;
     private static boolean loopSingle=false;
     private static boolean changingTrack=false;
+    private static boolean pausedByUser=false;
+    private static boolean stoppedByUser=false;
     private static Dialog dialog;
     private static Label currentMusicLabel;
     private static TextButton playButton;
@@ -107,16 +109,12 @@ public class MusicPlayer{
         if(loadingMusic&&!musicLoaded){
             waitForMusic();
         }
-        if(currentMusic!=null&&!changingTrack){
+        if(currentMusic!=null&&!changingTrack&&!pausedByUser&&!stoppedByUser&&!loopSingle){
             try{
-                if(!loopSingle){
-                    float length=currentMusic.getLength();
-                    float position=currentMusic.getPosition();
-                    if(length>0f&&position>=length-0.2f){
-                        changingTrack=true;
-                        nextTrack();
-                        changingTrack=false;
-                    }
+                if(!currentMusic.isPlaying()){
+                    changingTrack=true;
+                    nextTrack();
+                    changingTrack=false;
                 }
             }catch(Throwable t){
                 changingTrack=false;
@@ -124,19 +122,19 @@ public class MusicPlayer{
         }
         updateButtons();
     }
-    public static void toggleDialog(){
-        if(isDialogOpen()){
-            hideDialog();
-        }else{
-            showDialog();
-        }
-    }
     public static boolean isDialogOpen(){
         return dialog!=null&&dialog.parent!=null;
     }
     public static void hideDialog(){
         if(dialog!=null&&dialog.parent!=null){
             dialog.hide();
+        }
+    }
+    public static void toggleDialog(){
+        if(isDialogOpen()){
+            hideDialog();
+        }else{
+            showDialog();
         }
     }
     public static void showDialog(){
@@ -262,6 +260,8 @@ public class MusicPlayer{
             return;
         }
         currentMusic=music;
+        pausedByUser=false;
+        stoppedByUser=false;
         try{
             currentMusic.setVolume(volume);
             currentMusic.setLooping(loopSingle);
@@ -282,7 +282,11 @@ public class MusicPlayer{
         try{
             if(currentMusic.isPlaying()){
                 currentMusic.pause(true);
+                pausedByUser=true;
+                stoppedByUser=false;
             }else{
+                pausedByUser=false;
+                stoppedByUser=false;
                 currentMusic.play();
             }
         }catch(Throwable t){
@@ -327,6 +331,8 @@ public class MusicPlayer{
             }catch(Throwable ignored){}
         }
         currentMusic=null;
+        pausedByUser=false;
+        stoppedByUser=true;
         updateButtons();
     }
     private static void toggleShuffle(){
